@@ -252,6 +252,18 @@ textarea {
   line-height: 1.45;
 }
 
+.mental-question {
+  margin: 10px 0 18px;
+}
+
+.mental-question textarea {
+  min-height: 78px;
+}
+
+.mental-question textarea[readonly] {
+  cursor: default;
+}
+
 input:focus, select:focus, textarea:focus {
   border-color: var(--primary-2);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-2) 22%, transparent);
@@ -358,6 +370,130 @@ details[open] summary:after { content: "-"; }
 .clinical-card h4 {
   margin: 0 0 12px;
   font-size: 16px;
+}
+
+.anamnesis-guide {
+  display: grid;
+  gap: 14px;
+}
+
+.guide-group {
+  display: grid;
+  gap: 10px;
+}
+
+.guide-group > strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.guide-items {
+  display: grid;
+  gap: 10px;
+}
+
+.guide-items section {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+}
+
+.guide-items span {
+  display: block;
+  color: var(--sage);
+  font-size: 12px;
+  margin-bottom: 7px;
+}
+
+.guide-items ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.guide-items li + li {
+  margin-top: 6px;
+}
+
+.risk-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.risk-choice,
+.risk-text {
+  display: grid;
+  gap: 8px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.risk-choice p {
+  margin: 0;
+}
+
+.structured-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.structured-question {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.segmented-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.multi-choice-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.segmented-options label,
+.multi-choice-options label {
+  width: auto;
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+}
+
+.segmented-options input,
+.multi-choice-options input {
+  width: auto;
+  min-height: auto;
+  padding: 0;
+}
+
+.multi-choice-other {
+  max-width: 360px;
+  color: var(--muted);
+}
+
+.multi-choice-other input {
+  min-height: 38px;
+}
+
+.risk-text textarea {
+  min-height: 74px;
 }
 
 .qphda-card textarea[name="qphda"] {

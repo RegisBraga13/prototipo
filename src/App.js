@@ -37,6 +37,134 @@ const aiTreatmentOptions = [
   { agent: "Gemini", model: "2.5 Pro" },
   { agent: "Perplexity", model: "Sonar Pro" },
 ];
+const mentalExamQuestions = {
+  aparencia: `O que observar: O paciente esta acordado e alerta? A higiene esta preservada? Como ele se veste?
+Ele faz contato visual?
+E colaborativo, hostil, desconfiado ou indiferente a sua presenca?`,
+  consciencia: `O paciente permanece desperto durante a entrevista?
+Responde prontamente aos chamados e estimulos?
+Ha sinais de rebaixamento, confusao, delirium, transe ou dissociacao?`,
+  atencao: `Consegue manter o foco nas perguntas?
+Distrai-se facilmente ou persevera em um tema?
+Ha hipoprosexia, aprosexia, hiperprosexia ou desatencao seletiva?`,
+  orientacao: `Sabe informar quem e, onde esta e a data aproximada?
+Reconhece o contexto da consulta e a situacao atual?
+Ha desorientacao amnestica, confusional, delirante ou apatica?`,
+  memoria: `Recorda fatos recentes e remotos com coerencia?
+Consegue reter e evocar informacoes durante a entrevista?
+Ha amnesia, confabulacao, paramnesia, deja vu ou jamais vu?`,
+  sensopercepcao: `Refere perceber vozes, imagens, cheiros, gostos ou sensacoes corporais incomuns?
+Ha ilusoes, alucinacoes, pseudoalucinacoes ou alucinose?
+Refere despersonalizacao ou desrealizacao?`,
+  pensamentoCursoForma: `O pensamento flui em ritmo adequado e com associacoes logicas?
+Ha aceleracao, lentificacao, bloqueio, fuga de ideias ou perseveracao?
+Ha desagregacao, afrouxamento de nexos, tangencialidade ou circunstancialidade?`,
+  pensamentoConteudo: `Quais temas predominam no discurso do paciente?
+Ha delirios, obsessoes, fobias ou ideias de sobrevalia?
+Ha ideacao suicida, homicida ou conteudos de risco?`,
+  linguagem: `A fala e espontanea, compreensivel e adequada ao contexto?
+Ha logorreia, mutismo, taquilalia, bradilalia ou disartria?
+Ha neologismos, ecolalia, palilalia, coprolalia, mussitacao ou pararrespostas?`,
+  humor: `Como o paciente descreve o estado emocional predominante?
+O humor observado e compativel com o relato?
+Ha eutimia, hipotimia, hipertimia, disforia ou ansiedade?`,
+  afeto: `A expressao afetiva e modulada e congruente com o conteudo?
+Ha restricao, embotamento, labilidade ou incontinencia afetiva?
+Ha afeto pueril ou inadequacao/paratimia?`,
+  psicomotricidadeVontade: `Observe postura, movimentos, iniciativa e velocidade psicomotora.
+Ha agitacao, lentificacao, estupor, catatonia, tiques ou acatisia?
+Ha abulia, hipobulia, impulsividade, compulsao ou ecopraxia?`,
+  juizoCritico: `O paciente reconhece sintomas, prejuizos e necessidade de cuidado?
+Compreende consequencias dos proprios atos e decisoes?
+Ha negacao da doenca, critica parcial ou delirio de normalidade?`
+};
+const anamnesisQuestionGroups = [
+  {
+    title: "Perguntas imprescindiveis - rastreio inicial",
+    items: [
+      ["1. Queixa e impacto", [
+        "Nas suas proprias palavras, o que te trouxe aqui hoje?",
+        {
+          key: "impactoSintomas",
+          response: "multiple",
+          question: "De que forma isso que voce esta sentindo atrapalha o seu trabalho, seus estudos ou suas relacoes?",
+          options: ["Nenhuma", "Leve", "Moderado", "Grave", "Outro"],
+          otherKey: "impactoSintomasOutro"
+        }
+      ]],
+      ["3. Mania/hipomania", [
+        {
+          key: "maniaHipomaniaSintomas",
+          response: "multiple",
+          question: "Ja teve periodos, por dias, que voce ficou:",
+          options: ["Muito acelerado", "Com muita energia", "Falando mais", "Dormindo pouco", "Fazendo coisas impulsivas", "Outro"],
+          otherKey: "maniaHipomaniaSintomasOutro"
+        }
+      ]],
+      ["4. Ansiedade e panico", [
+        { key: "ansiedadeFaltaControle", label: "Falta de controle", question: "Voce sente que nao consegue parar ou controlar as suas preocupacoes?", response: "choice" },
+        { key: "ansiedadePreocupacaoExcessiva", label: "Preocupacao excessiva", question: "Voce se preocupa muito com diversas coisas do dia a dia, mesmo sem motivos graves?", response: "choice" },
+        { key: "ansiedadeTensaoCorporal", label: "Tensao corporal", question: "Voce sente dificuldade para relaxar, tensao muscular ou fica com dor no corpo sem causa aparente?", response: "choice" },
+        { key: "ansiedadeDificuldadeFocar", label: "Dificuldade de focar", question: "Sente que e dificil se concentrar nas suas tarefas ou pensamentos?", response: "choice" },
+        { key: "ansiedadeAgitacao", label: "Agitacao", question: "Fica tao inquieto ou agitado a ponto de ter dificuldade para ficar sentado?", response: "choice" },
+        { key: "ansiedadeIrritabilidade", label: "Irritabilidade", question: "Tem ficado mais irritado(a) ou impaciente que o normal?", response: "choice" },
+        { key: "ansiedadeSintomasFisicos", label: "Sintomas fisicos", question: "Apresenta palpitacoes, falta de ar, suor frio, tontura ou problemas para dormir com frequencia?", response: "choice" }
+      ]],
+      ["6. Sono e apetite", [
+        "O seu sono tem sido reparador? Voce demora a pegar no sono ou acorda muito antes do horario?",
+        "O seu apetite sumiu ou voce esta comendo compulsivamente?"
+      ]],
+      ["8. Sintomas depressivos", [
+        { key: "depressaoPoucoInteressePrazer", label: "Interesse ou prazer", question: "Apresenta pouco interesse ou prazer em fazer coisas?", response: "choice" },
+        { key: "depressaoDesanimoDesesperanca", label: "Desanimo e desesperanca", question: "Apresenta desanimo, desalento ou falta de esperanca?", response: "choice" },
+        { key: "depressaoSono", label: "Sono", question: "Apresenta dificuldade em adormecer, dormir sem interrupcoes ou dormir demais?", response: "choice" },
+        { key: "depressaoEnergia", label: "Energia", question: "Apresenta cansaco ou falta de energia?", response: "choice" },
+        { key: "depressaoApetite", label: "Apetite", question: "Apresenta falta ou excesso de apetite?", response: "choice" },
+        { key: "depressaoConcentracao", label: "Concentracao", question: "Teve dificuldade em concentrar-se nas coisas, como ao ler jornal ou ver televisao?", response: "choice" },
+        { key: "depressaoFalaLenta", label: "Fala lenta", question: "Apresenta fala lenta que outras pessoas notaram?", response: "choice" },
+        { key: "depressaoAgitacao", label: "Agitacao", question: "Apresenta agitacao, andando de um lado para o outro muito mais do que o habitual?", response: "choice" },
+        { key: "depressaoAutoestimaRuinaEstorvo", label: "Autoestima e estorvo", question: "Apresenta baixa estima, sentimento de ruina, desilusao ou sentimento de estorvo para a familia?", response: "choice" }
+      ]]
+    ]
+  },
+  {
+    title: "Perguntas apos vinculo com o paciente",
+    items: [
+      ["5. Sintomas psicoticos e paranoia", [
+        { key: "sintomasPsicoticosParanoiaObservado", label: "Paranoia", question: "Voce tem tido a sensacao de que as pessoas estao te observando, comentando sobre voce ou querendo te prejudicar?", response: "choice" },
+        { key: "sintomasPsicoticosVozesRuidos", label: "Vozes ou ruidos", question: "Voce ja escutou vozes ou ruidos quando estava sozinho?", response: "choice" },
+        { key: "sintomasPsicoticosOutro", label: "Outro", question: "Outro", response: "text", placeholder: "Especifique aqui" }
+      ]],
+      ["7. Uso de substancias e comportamentos aditivos", [
+        {
+          key: "usoSubstanciasComportamentos",
+          response: "multiple",
+          options: [
+            "Nicotina",
+            "Alcool",
+            "Cafeina",
+            "Calmantes",
+            "Estimulantes",
+            "Cocaina",
+            "Opioides",
+            "Canabinoides",
+            "Jogos de Azar",
+            "Redes Sociais",
+            "Compras Compulsivas",
+            "Transtornos Alimentares"
+          ]
+        }
+      ]],
+      ["A. Risco de suicidio e desesperanca", [
+        { key: "riscoSuicidioIdeacao", label: "Ideacao", question: "Voce tem pensado em desistir da vida ou em morrer?", response: "choice" },
+        { key: "riscoSuicidioPlanejamento", label: "Planejamento", question: "Voce ja pensou em como faria isso ou quando?", response: "choice" },
+        { key: "riscoSuicidioMeios", label: "Meios", question: "Voce tem acesso aos meios para colocar esse plano em pratica?", response: "choice" },
+        { key: "riscoSuicidioTentativasPrevias", label: "Tentativas previas", question: "Voce ja tentou machucar a vida no passado?", response: "choice" },
+        { key: "riscoSuicidioRazoesViver", label: "Razoes para viver", question: "O que te impede de fazer isso hoje?", response: "text" }
+      ]]
+    ]
+  }
+];
 
 const icons = {
   patient: personIcon(),
@@ -244,6 +372,7 @@ function consultationPageBody(form, patient) {
       <h4>QP e HDA</h4>
       ${voiceTextarea("qphda", "Queixa principal (QP) e historia da doenca atual (HDA)", qphda, "Registrar QP nas palavras do paciente e HDA com cronologia dos sintomas, relacao temporal com eventos vitais, sintomas fisicos associados, fatores desencadeantes, fatores de melhora/piora, uso de substancias, sintomas positivos e negativos, impacto funcional e tratamentos previos.")}
     </div>
+    ${anamnesisQuestionGuide()}
     <div class="grid">
       ${selectFieldWithOther("inicio", "Inicio", optionGroups.inicio, form.inicio)}
       ${selectFieldWithOther("curso", "Curso", optionGroups.curso, form.curso)}
@@ -256,9 +385,8 @@ function consultationPageBody(form, patient) {
   if (consultationPage === "antecedentes") return clinicalPage("Antecedentes", `
     ${chips("psiPrevios", "Diagnosticos psiquiatricos previos", optionGroups.psiPrevios, form.psiPrevios)}
     ${chips("tratamentos", "Tratamentos previos", optionGroups.tratamentos, form.tratamentos)}
-    ${chips("medicos", "Antecedentes medicos", optionGroups.medicos, form.medicos)}
+    ${textarea("medicos", "Antecedentes medicos", joinValues(form.medicos), "", 2)}
     ${chips("familiares", "Antecedentes familiares", optionGroups.familiares, form.familiares)}
-    ${chips("substancias", "Habitos e substancias", optionGroups.substancias, form.substancias)}
   `, "consultation");
   if (consultationPage === "psiquico") return clinicalPage("B. Exame psiquico", mentalExamBody(form), "consultation");
   if (consultationPage === "neurologico") return clinicalPage("C. Exame fisico e neurologico", neurologicExamBody(form), "consultation");
@@ -299,13 +427,16 @@ function mentalExam(form) {
 
 function mentalExamBody(form) {
   const groups = [
-    ["apresentacao", "Apresentacao"], ["consciencia", "Consciencia / Orientacao / Atencao"],
-    ["memoria", "Memoria"], ["sensopercepcao", "Sensopercepcao"], ["pensamento", "Pensamento"],
-    ["linguagem", "Linguagem"], ["juizo", "Juizo / Critica"], ["afetividade", "Afetividade"],
-    ["humor", "Humor"], ["vontade", "Vontade"], ["psicomotricidade", "Psicomotricidade"], ["inteligencia", "Inteligencia"]
+    ["aparencia", "Aparencia, Atitude e Contato"],
+    ["consciencia", "Consciencia"], ["atencao", "Atencao"], ["orientacao", "Orientacao"],
+    ["memoria", "Memoria"], ["sensopercepcao", "Sensopercepcao"],
+    ["pensamentoCursoForma", "Pensamento (Curso e Forma)"], ["pensamentoConteudo", "Pensamento (Conteudo)"],
+    ["linguagem", "Linguagem"], ["humor", "Humor (Estado Basal)"], ["afeto", "Afeto (Resposta)"],
+    ["psicomotricidadeVontade", "Psicomotricidade e Vontade"], ["juizoCritico", "Juizo Critico (Insight)"]
   ];
   return groups.map(([key, label]) => `
     ${chips(key, label, optionGroups[key], form[key])}
+    ${questionTextarea(key, `Perguntas fixas - ${label}`, form[`${key}Perguntas`])}
   `).join("");
 }
 
@@ -516,12 +647,98 @@ function selectFieldWithOther(name, labelText, options, value = "") {
   return `<div>${selectField(name, labelText, options, value)}${otherBox}</div>`;
 }
 
-function textarea(name, labelText, value = "", placeholder = "") {
-  return `<label>${labelText}<textarea name="${name}" placeholder="${escapeAttr(placeholder)}">${escapeHtml(value || "")}</textarea></label>`;
+function textarea(name, labelText, value = "", placeholder = "", rows = "") {
+  const rowsAttr = rows ? ` rows="${rows}"` : "";
+  return `<label>${labelText}<textarea name="${name}"${rowsAttr} placeholder="${escapeAttr(placeholder)}">${escapeHtml(value || "")}</textarea></label>`;
 }
 
 function voiceTextarea(name, labelText, value = "", placeholder = "") {
   return `<div>${textarea(name, labelText, value, placeholder)}<div class="actions"><button class="secondary" type="button" data-action="voice" data-target="${name}">Transcrever por voz</button></div></div>`;
+}
+
+function questionTextarea(key, labelText, value = "") {
+  return `<label class="mental-question">${labelText}<textarea rows="3" readonly placeholder="Perguntas fixas deste item">${escapeHtml(fixedMentalQuestion(key, value))}</textarea></label>`;
+}
+
+function fixedMentalQuestion(key, value = "") {
+  return mentalExamQuestions[key] || "";
+}
+
+function anamnesisQuestionGuide() {
+  const form = currentClinicalDraft();
+  return `<div class="clinical-card anamnesis-guide">
+    <h4>Perguntas imprescindiveis para rastreio diagnostico, impacto, gravidade e riscos</h4>
+    ${anamnesisQuestionGroups.map(group => `
+      <div class="guide-group">
+        <strong>${escapeHtml(group.title)}</strong>
+        <div class="guide-items">
+          ${group.items.map(([label, questions]) => `
+            <section>
+              <span>${escapeHtml(label)}</span>
+              ${questions.some(question => typeof question === "object")
+                ? anamnesisStructuredFields(questions, form)
+                : `<ul>${questions.map(question => `<li>${escapeHtml(question)}</li>`).join("")}</ul>`}
+            </section>
+          `).join("")}
+        </div>
+      </div>
+    `).join("")}
+  </div>`;
+}
+
+function anamnesisStructuredFields(questions, form) {
+  return `<div class="structured-fields">
+    ${questions.map(item => {
+      if (typeof item === "string") return `<ul><li>${escapeHtml(item)}</li></ul>`;
+      if (item.response === "multiple") return multipleChoiceField(item, form);
+      return suicideRiskFields([item], form);
+    }).join("")}
+  </div>`;
+}
+
+function multipleChoiceField(item, form) {
+  const values = Array.isArray(form[item.key]) ? form[item.key] : form[item.key] ? [form[item.key]] : [];
+  const set = new Set(values);
+  const otherInput = item.otherKey && set.has("Outro") ? `
+    <label class="multi-choice-other">Descrever outro
+      <input name="${item.otherKey}" value="${escapeAttr(form[item.otherKey] || "")}" placeholder="Especifique aqui" />
+    </label>
+  ` : "";
+  return `<div class="risk-fields">
+    ${item.question ? `<p class="structured-question">${escapeHtml(item.question)}</p>` : ""}
+    <div class="multi-choice-options">
+      ${item.options.map(option => `
+        <label>
+          <input type="checkbox" name="${item.key}" value="${escapeAttr(option)}" ${set.has(option) ? "checked" : ""} />
+          ${escapeHtml(option)}
+        </label>
+      `).join("")}
+    </div>
+    ${otherInput}
+  </div>`;
+}
+
+function suicideRiskFields(questions, form) {
+  return `<div class="risk-fields">
+    ${questions.map(item => item.response === "text" ? `
+      <label class="risk-text">
+        <b>${escapeHtml(item.label)}:</b> ${escapeHtml(item.question)}
+        <textarea name="${item.key}" rows="2" placeholder="${escapeAttr(item.placeholder || "Resposta preenchida pelo medico")}">${escapeHtml(form[item.key] || "")}</textarea>
+      </label>
+    ` : `
+      <div class="risk-choice">
+        <p><b>${escapeHtml(item.label)}:</b> ${escapeHtml(item.question)}</p>
+        <div class="segmented-options">
+          ${["SIM", "NAO"].map(option => `
+            <label>
+              <input type="radio" name="${item.key}" value="${option}" ${form[item.key] === option ? "checked" : ""} />
+              ${option}
+            </label>
+          `).join("")}
+        </div>
+      </div>
+    `).join("")}
+  </div>`;
 }
 
 function chips(name, labelText, options, values = []) {
@@ -804,9 +1021,9 @@ function buildDiagnosticSuggestion(form) {
     qphdaText, form.inicio, form.curso, form.fatoresOutro,
     joinValues(form.fatores), joinValues(form.fatoresMelhora), joinValues(form.fatoresPiora), joinValues(form.impacto),
     joinValues(form.psiPrevios), joinValues(form.tratamentos), joinValues(form.medicos), joinValues(form.familiares), joinValues(form.substancias),
-    joinValues(form.apresentacao), joinValues(form.consciencia), joinValues(form.memoria), joinValues(form.sensopercepcao),
-    joinValues(form.pensamento), joinValues(form.linguagem), joinValues(form.juizo), joinValues(form.afetividade),
-    joinValues(form.humor), joinValues(form.vontade), joinValues(form.psicomotricidade), joinValues(form.inteligencia),
+    joinValues(form.aparencia), joinValues(form.consciencia), joinValues(form.atencao), joinValues(form.orientacao), joinValues(form.memoria), joinValues(form.sensopercepcao),
+    joinValues(form.pensamentoCursoForma), joinValues(form.pensamentoConteudo), joinValues(form.linguagem),
+    joinValues(form.humor), joinValues(form.afeto), joinValues(form.psicomotricidadeVontade), joinValues(form.juizoCritico),
     form.observacoesRetorno
   ].filter(Boolean).join(" | ");
   const text = normalizeText(sourceText);
@@ -995,7 +1212,8 @@ function buildTreatmentSuggestion(form) {
   const riskTerms = normalizeText([
     anamnesisText(form),
     joinValues(form.eventos),
-    joinValues(form.pensamento),
+    joinValues(form.pensamentoCursoForma),
+    joinValues(form.pensamentoConteudo),
     form.observacoesRetorno,
   ].filter(Boolean).join(" | "));
   const hasRisk = ["ideacao suicida", "tentativa de suicidio", "autoagressao", "risco", "morte"].some(term => riskTerms.includes(term));
@@ -1232,18 +1450,19 @@ function historyText(form) {
 
 function mentalStateText(form) {
   const groups = [
-    ["apresentacao", "apresentacao"],
-    ["consciencia", "consciencia, orientacao e atencao"],
+    ["consciencia", "consciencia"],
+    ["aparencia", "aparencia, atitude e contato"],
+    ["atencao", "atencao"],
+    ["orientacao", "orientacao"],
     ["memoria", "memoria"],
     ["sensopercepcao", "sensopercepcao"],
-    ["pensamento", "pensamento"],
+    ["pensamentoCursoForma", "pensamento, curso e forma"],
+    ["pensamentoConteudo", "pensamento, conteudo"],
     ["linguagem", "linguagem"],
-    ["juizo", "juizo, critica e insight"],
-    ["afetividade", "afetividade"],
     ["humor", "humor"],
-    ["vontade", "vontade/pragmatismo"],
-    ["psicomotricidade", "psicomotricidade"],
-    ["inteligencia", "funcionamento intelectual"]
+    ["afeto", "afeto"],
+    ["psicomotricidadeVontade", "psicomotricidade e vontade"],
+    ["juizoCritico", "juizo critico e insight"]
   ];
   const findings = groups
     .map(([key, label]) => joinValues(form[key]) ? `${label}: ${joinValues(form[key])}${form[`${key}Outro`] ? ` (${form[`${key}Outro`]})` : ""}` : "")
@@ -1255,15 +1474,17 @@ function relevantNegativeText(form) {
   const negativeFindings = [
     ...negativeValues("impacto", form.impacto),
     ...negativeValues("sensopercepcao", form.sensopercepcao),
-    ...negativeValues("pensamento", form.pensamento),
-    ...negativeValues("juizo", form.juizo),
-    ...negativeValues("apresentacao", form.apresentacao),
+    ...negativeValues("pensamento, curso e forma", form.pensamentoCursoForma),
+    ...negativeValues("pensamento, conteudo", form.pensamentoConteudo),
+    ...negativeValues("juizo critico", form.juizoCritico),
+    ...negativeValues("aparencia", form.aparencia),
     ...negativeValues("consciencia", form.consciencia),
+    ...negativeValues("atencao", form.atencao),
+    ...negativeValues("orientacao", form.orientacao),
     ...negativeValues("memoria", form.memoria),
     ...negativeValues("linguagem", form.linguagem),
-    ...negativeValues("afetividade", form.afetividade),
-    ...negativeValues("vontade", form.vontade),
-    ...negativeValues("psicomotricidade", form.psicomotricidade),
+    ...negativeValues("afeto", form.afeto),
+    ...negativeValues("psicomotricidade e vontade", form.psicomotricidadeVontade),
     ...negativeValues("efeitos", form.efeitos),
     ...negativeValues("ansiedadeRetorno", form.ansiedadeRetorno)
   ];
@@ -1399,9 +1620,10 @@ function summarizeEvidence(form) {
     form.inicio && `inicio ${form.inicio}`,
     form.curso && `curso ${form.curso}`,
     joinValues(form.humor) && `humor: ${joinValues(form.humor)}`,
-    joinValues(form.pensamento) && `pensamento: ${joinValues(form.pensamento)}`,
+    joinValues(form.pensamentoCursoForma) && `pensamento curso/forma: ${joinValues(form.pensamentoCursoForma)}`,
+    joinValues(form.pensamentoConteudo) && `pensamento conteudo: ${joinValues(form.pensamentoConteudo)}`,
     joinValues(form.sensopercepcao) && `sensopercepcao: ${joinValues(form.sensopercepcao)}`,
-    joinValues(form.juizo) && `juizo/critica: ${joinValues(form.juizo)}`,
+    joinValues(form.juizoCritico) && `juizo critico/insight: ${joinValues(form.juizoCritico)}`,
     joinValues(form.impacto) && `impacto: ${joinValues(form.impacto)}`
   ].filter(Boolean).join("; ");
 }
