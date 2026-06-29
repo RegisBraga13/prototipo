@@ -252,6 +252,10 @@ textarea {
   line-height: 1.45;
 }
 
+textarea[name="medicos"] {
+  min-height: 54px;
+}
+
 .mental-question {
   margin: 10px 0 18px;
 }
@@ -560,6 +564,29 @@ details[open] summary:after { content: "-"; }
   border-radius: var(--radius);
   padding: 14px;
   margin-bottom: 14px;
+}
+
+.ai-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, .9fr) minmax(220px, 1.1fr);
+  gap: 8px;
+  align-items: end;
+}
+
+.ai-toolbar label {
+  min-width: 0;
+}
+
+.ai-toolbar select {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.ai-toolbar button {
+  width: 100%;
+  min-height: 46px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 
 .doctor-note {

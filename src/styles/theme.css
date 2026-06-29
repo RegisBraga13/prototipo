@@ -252,6 +252,10 @@ textarea {
   line-height: 1.45;
 }
 
+textarea[name="medicos"] {
+  min-height: 54px;
+}
+
 .mental-question {
   margin: 10px 0 18px;
 }
@@ -599,6 +603,40 @@ details[open] summary:after { content: "-"; }
   border-radius: var(--radius);
   padding: 14px;
   margin-bottom: 14px;
+}
+
+.diagnosis-options {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.diagnosis-option {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  min-height: 48px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.diagnosis-option input {
+  width: 18px;
+  min-height: 18px;
+  margin-top: 2px;
+}
+
+.diagnosis-option span {
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.diagnosis-manual-extra {
+  margin-top: 14px;
 }
 
 .ai-toolbar {

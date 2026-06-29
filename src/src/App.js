@@ -17,11 +17,11 @@ const consultationPages = [
   ["anamnese", "Anamnese"],
   ["antecedentes", "Antecedentes"],
   ["psiquico", "Exame psiquico"],
+  ["evolucao", "Evolucao"],
   ["neurologico", "Exame neurologico"],
   ["diagnostico", "Diagnostico"],
   ["tratamento", "Tratamento"],
-  ["medicamentos", "Medicamentos"],
-  ["evolucao", "Evolucao"]
+  ["medicamentos", "Medicamentos"]
 ];
 const returnPages = [
   ["evolucao-retorno", "Evolucao"],
@@ -350,15 +350,10 @@ function clinicalPage(title, body, scope = "") {
 function consultationPageBody(form, patient) {
   if (consultationPage === "anamnese") return clinicalPage("A. Anamnese", `
     ${voiceTextarea("queixa", "Queixa principal nas palavras do paciente", form.queixa)}
-    ${voiceTextarea("historia", "Historia do problema principal", form.historia, "Registrar cronologia dos sintomas, relacao temporal com eventos vitais, sintomas fisicos associados, fatores desencadeantes, fatores de melhora/piora, uso de substancias, sintomas positivos e negativos, impacto funcional e tratamentos previos.")}
+    ${voiceTextarea("historia", "Historia do problema principal", form.historia, "Registrar cronologia dos sintomas, relacao temporal com eventos vitais, sintomas fisicos associados, fatores desencadeantes e de piora, fatores de melhora, uso de substancias, sintomas positivos e negativos, impacto funcional e tratamentos previos.")}
     ${anamnesisQuestionGuide()}
-    <div class="grid">
-      ${selectFieldWithOther("inicio", "Inicio", optionGroups.inicio, form.inicio)}
-      ${selectFieldWithOther("curso", "Curso", optionGroups.curso, form.curso)}
-    </div>
-    ${chips("fatores", "Fatores desencadeantes", optionGroups.fatores, form.fatores)}
+    ${chips("fatores", "Fatores desencadeantes e de piora", optionGroups.fatores, form.fatores)}
     ${chips("fatoresMelhora", "Fatores de melhora", optionGroups.fatoresMelhora, form.fatoresMelhora)}
-    ${chips("fatoresPiora", "Fatores de piora", optionGroups.fatoresPiora, form.fatoresPiora)}
     ${chips("impacto", "Impacto funcional", optionGroups.impacto, form.impacto)}
   `, "consultation");
   if (consultationPage === "antecedentes") return clinicalPage("Antecedentes", `
@@ -368,11 +363,12 @@ function consultationPageBody(form, patient) {
     ${chips("familiares", "Antecedentes familiares", optionGroups.familiares, form.familiares)}
   `, "consultation");
   if (consultationPage === "psiquico") return clinicalPage("B. Exame psiquico", mentalExamBody(form), "consultation");
-  if (consultationPage === "neurologico") return clinicalPage("C. Exame fisico e neurologico", neurologicExamBody(form), "consultation");
-  if (consultationPage === "diagnostico") return clinicalPage("D. Diagnostico e diferenciais", diagnosisModule(form), "consultation");
-  if (consultationPage === "tratamento") return clinicalPage("E. Tratamento e orientacoes", treatmentModule(form), "consultation");
+  if (consultationPage === "evolucao") return clinicalPage("C. Evolucao do Paciente", evolutionBody(form, patient), "");
+  if (consultationPage === "neurologico") return clinicalPage("D. Exame fisico e neurologico", neurologicExamBody(form), "consultation");
+  if (consultationPage === "diagnostico") return clinicalPage("E. Diagnostico e diferenciais", diagnosisModule(form), "consultation");
+  if (consultationPage === "tratamento") return clinicalPage("F. Tratamento e orientacoes", treatmentModule(form), "consultation");
   if (consultationPage === "medicamentos") return clinicalPage("Medicamentos", medicationBody(form), "consultation");
-  return clinicalPage("F. Evolucao do Paciente", evolutionBody(form, patient), "consultation");
+  return clinicalPage("C. Evolucao do Paciente", evolutionBody(form, patient), "");
 }
 
 function returnPageBody(form, patient, previous) {
@@ -432,8 +428,8 @@ function neurologicExamBody(form) {
 
 function diagnosisTreatment(form) {
   return `
-    ${section("D. Diagnostico e diferenciais", diagnosisModule(form))}
-    ${section("E. Tratamento e orientacoes", treatmentModule(form))}
+    ${section("E. Diagnostico e diferenciais", diagnosisModule(form))}
+    ${section("F. Tratamento e orientacoes", treatmentModule(form))}
   `;
 }
 
@@ -497,19 +493,19 @@ function medicationBody(form) {
 }
 
 function evolutionModule(form, patient, previous = null, isReturn = false) {
-  return section(isReturn ? "Evolucao do Retorno" : "F. Evolucao do Paciente", evolutionBody(form, patient, previous, isReturn), true);
+  return section(isReturn ? "Evolucao do Retorno" : "C. Evolucao do Paciente", evolutionBody(form, patient, previous, isReturn), true);
 }
 
 function evolutionBody(form, patient, previous = null, isReturn = false) {
-  const evolution = form.evolution || "";
+  const evolution = outdatedEvolutionText(form.evolution) ? "" : (form.evolution || "");
   return `
     <div class="actions">
-      <button class="primary" type="submit">${isReturn ? "Salvar retorno" : "Salvar consulta"}</button>
-      <button class="secondary" type="button" data-action="copy-evolution">Copiar texto da evolucao</button>
-      <button class="secondary" type="button" data-action="print-evolution">Imprimir</button>
-      <button class="secondary" type="button" data-action="pdf-evolution">Exportar evolucao em PDF</button>
+      <button class="primary" type="button" data-action="generate-evolution">Gerar evolucao</button>
     </div>
-    ${textarea("evolution", "Evolucao medica editavel", evolution)}
+    ${textarea("evolution", "Evolucao SOAP editavel", evolution)}
+    <div class="actions">
+      <button class="primary" type="submit">OK</button>
+    </div>
   `;
 }
 
@@ -857,10 +853,9 @@ function bindActions() {
       if (action === "form-page") switchFormPage(element);
       if (action === "save-next-page") saveCurrentPageAndAdvance(element);
       if (action === "generate-diagnosis") generateDiagnosisFromClinicalData(element);
+      if (action === "generate-evolution") generateEvolutionFromClinicalData(element);
       if (action === "clear-patient") { draft.patient = {}; render(); }
       if (action === "delete-patient") deletePatient();
-      if (action === "copy-evolution") copyEvolution();
-      if (action === "print-evolution" || action === "pdf-evolution") printEvolution();
       if (action === "voice") startVoice(element.dataset.target);
       if (action === "edit-current-patient") { view = "patient"; draft.patient = structuredClone(getPatient()); render(); }
       if (action === "open-entry") openEntry(element.dataset.id, element.dataset.type);
@@ -902,10 +897,25 @@ function generateDiagnosisFromClinicalData(element) {
   render();
 }
 
+function generateEvolutionFromClinicalData(element) {
+  const formElement = element.closest("form");
+  if (formElement) updateDraftFromForm(formElement);
+  const scope = view === "return" ? "return" : "consultation";
+  const target = scope === "return" ? draft.return : draft.consultation;
+  const previous = scope === "return" ? latestEntry(selectedPatientId) : null;
+  const patient = getPatient() || {};
+  const suggestion = {
+    evolution: buildEvolutionNarrative(target || {}, patient, previous, scope === "return")
+  };
+  if (scope === "return") draft.return = { ...(draft.return || {}), ...suggestion };
+  else draft.consultation = { ...(draft.consultation || {}), ...suggestion };
+  render();
+}
+
 function buildDiagnosticSuggestion(form) {
   const sourceText = [
-    form.queixa, form.historia, form.inicio, form.curso, form.fatoresOutro,
-    joinValues(form.fatores), joinValues(form.fatoresMelhora), joinValues(form.fatoresPiora), joinValues(form.impacto),
+    form.queixa, form.historia, form.fatoresOutro,
+    joinValues(form.fatores), joinValues(form.fatoresMelhora), joinValues(form.impacto),
     joinValues(form.psiPrevios), joinValues(form.tratamentos), joinValues(form.medicos), joinValues(form.familiares), joinValues(form.substancias),
     joinValues(form.aparencia), joinValues(form.consciencia), joinValues(form.atencao), joinValues(form.orientacao), joinValues(form.memoria), joinValues(form.sensopercepcao),
     joinValues(form.pensamentoCursoForma), joinValues(form.pensamentoConteudo), joinValues(form.linguagem),
@@ -1001,8 +1011,6 @@ function summarizeEvidence(form) {
   return [
     form.queixa && `queixa: ${form.queixa}`,
     form.historia && `historia: ${form.historia}`,
-    form.inicio && `inicio ${form.inicio}`,
-    form.curso && `curso ${form.curso}`,
     joinValues(form.humor) && `humor: ${joinValues(form.humor)}`,
     joinValues(form.pensamentoCursoForma) && `pensamento curso/forma: ${joinValues(form.pensamentoCursoForma)}`,
     joinValues(form.pensamentoConteudo) && `pensamento conteudo: ${joinValues(form.pensamentoConteudo)}`,
@@ -1014,6 +1022,77 @@ function summarizeEvidence(form) {
 
 function joinValues(value) {
   return Array.isArray(value) ? value.filter(Boolean).join(", ") : value || "";
+}
+
+function outdatedEvolutionText(value = "") {
+  return normalizeText(value).startsWith("evolucao medica auxiliada por ia");
+}
+
+function stripFinalPeriod(value = "") {
+  return String(value || "").trim().replace(/[.\s]+$/g, "");
+}
+
+function firstLineFromQphda(value = "") {
+  return stripFinalPeriod(String(value || "").split(/\n+/).find(Boolean) || "");
+}
+
+function remainingQphdaText(value = "", complaint = "") {
+  const lines = String(value || "").split(/\n+/).map(line => stripFinalPeriod(line)).filter(Boolean);
+  if (!lines.length) return "";
+  if (complaint && normalizeText(lines[0]).includes(normalizeText(complaint))) return lines.slice(1).join(". ");
+  return lines.slice(1).join(". ") || lines[0];
+}
+
+function joinWithOutro(value, otherValue = "") {
+  const list = Array.isArray(value) ? value.filter(Boolean) : value ? [value] : [];
+  const base = list.filter(item => normalizeText(item) !== "outro").join(", ");
+  return [base, otherValue].filter(Boolean).join(base && otherValue ? ", " : "");
+}
+
+function clinicalValueList(value, otherValue = "") {
+  return [
+    ...(Array.isArray(value) ? value.filter(Boolean) : value ? [value] : []).filter(item => normalizeText(item) !== "outro"),
+    otherValue
+  ].map(clinicalPhrase).filter(Boolean);
+}
+
+function clinicalPhrase(value = "") {
+  const cleaned = stripFinalPeriod(value)
+    .replace(/\s+/g, " ")
+    .replace(/^(aparencia|aparência|atitude|contato|consciencia|consciência|atencao|atenção|orientacao|orientação|memoria|memória|sensopercepcao|sensopercepção|linguagem|humor|afeto|psicomotricidade|vontade|juizo critico|juízo crítico|insight)\s*:\s*/i, "")
+    .replace(/^(memoria|memória)\s+/i, "")
+    .replace(/^(sensopercepcao|sensopercepção|linguagem|humor|afeto|consciencia|consciência|atencao|atenção|orientacao|orientação)\s+/i, "")
+    .replace(/^(paciente\s+)?/i, "")
+    .trim();
+  return lowerFirst(cleaned);
+}
+
+function formatClinicalList(items = []) {
+  const cleanItems = [...new Set(items.map(clinicalPhrase).filter(Boolean))];
+  if (cleanItems.length <= 1) return cleanItems[0] || "";
+  if (cleanItems.length === 2) return `${cleanItems[0]} e ${cleanItems[1]}`;
+  return `${cleanItems.slice(0, -1).join(", ")} e ${cleanItems.at(-1)}`;
+}
+
+function improvementSentence(value = "") {
+  const text = lowerFirst(stripFinalPeriod(value)).replace(/^melhora\s+/i, "");
+  const connector = normalizeText(text).startsWith("apos ") ? "" : "com ";
+  return `Diz que a melhora geralmente ocorre ${connector}${text}.`;
+}
+
+function polishSoapText(value = "") {
+  return `${stripFinalPeriod(value)
+    .replace(/\s+/g, " ")
+    .replace(/\. Comparece/g, ", encaminhado ao atendimento com a psiquiatria. Comparece")
+    .replace(/\. Antecedentes:/g, ". Na historia pregressa,")
+    .replace(/diagnosticos psiquiatricos previos:/g, "faz mencao a")
+    .replace(/tratamentos previos:/g, "tratamentos previos:")
+    .trim()}.`;
+}
+
+function lowerFirst(value = "") {
+  const text = String(value || "").trim();
+  return text ? text.charAt(0).toLowerCase() + text.slice(1) : "";
 }
 
 function normalizeText(value) {
@@ -1093,6 +1172,113 @@ function printEvolution() {
 function pdfEntry(id, type) {
   const entry = findEntry(id, type);
   exportTextAsPdf(entry?.label || "Evolucao", entry?.evolution || "");
+}
+
+function buildEvolutionNarrative(form, patient = {}, previous = null, isReturn = false) {
+  return [
+    evolutionOpeningText(form, patient),
+    hdaEvolutionText(form, previous, isReturn),
+    antecedentsEvolutionText(form),
+    mentalExamEvolutionText(form)
+  ].filter(Boolean).join("\n\n");
+}
+
+function patientIdentificationText(patient = {}, withPrefix = true) {
+  const age = calculateAge(patient.nascimento);
+  const sexo = patient.sexo ? lowerFirst(patient.sexo) : "";
+  const fragments = [
+    sexo ? `${withPrefix ? "Paciente " : ""}${sexo}` : withPrefix ? "Paciente" : "",
+    age ? `${age} anos` : "",
+    patient.estadoCivil ? patient.estadoCivil.toLowerCase() : "",
+    patient.ocupacao ? lowerFirst(patient.ocupacao) : ""
+  ].filter(Boolean);
+  return `${fragments.join(", ")}.`;
+}
+
+function evolutionOpeningText(form, patient = {}) {
+  const identification = patientIdentificationText(patient, false).replace(/\.$/, "");
+  const complaint = stripFinalPeriod(form.queixa || firstLineFromQphda(form.qphda) || "queixa nao informada");
+  const subject = identification ? `Paciente ${identification}` : "Paciente";
+  return `${subject}, se apresenta ao servico com queixa principal de "${complaint}".`;
+}
+
+function hdaEvolutionText(form, previous = null, isReturn = false) {
+  if (isReturn) return `HDA: Paciente relata que ${lowerFirst(stripFinalPeriod(returnStoryText(form, previous)))}.`;
+  const story = form.historia || remainingQphdaText(form.qphda, form.queixa);
+  const fatorText = joinWithOutro(form.fatores, form.fatoresOutro);
+  const melhoraText = joinWithOutro(form.fatoresMelhora, form.fatoresMelhoraOutro);
+  const impactoText = joinValues(form.impacto);
+  const parts = [
+    story ? lowerFirst(stripFinalPeriod(story)) : "",
+    fatorText ? `associa o quadro a ${lowerFirst(fatorText)}` : "",
+    melhoraText ? lowerFirst(stripFinalPeriod(improvementSentence(melhoraText))) : "",
+    impactoText ? `descreve impacto funcional como ${lowerFirst(impactoText)}` : ""
+  ].filter(Boolean);
+  return `HDA: Paciente relata que ${parts.length ? parts.join(". ") : "a historia da doenca atual ainda nao foi preenchida"}.`;
+}
+
+function antecedentsEvolutionText(form) {
+  const parts = [
+    joinWithOutro(form.psiPrevios, form.psiPreviosOutro) ? `historia pregressa de ${lowerFirst(joinWithOutro(form.psiPrevios, form.psiPreviosOutro))}` : "",
+    joinWithOutro(form.tratamentos, form.tratamentosOutro) ? `tratamentos previos com ${lowerFirst(joinWithOutro(form.tratamentos, form.tratamentosOutro))}` : "",
+    joinWithOutro(form.medicos, form.medicosOutro) ? `antecedentes medicos de ${lowerFirst(joinWithOutro(form.medicos, form.medicosOutro))}` : "",
+    joinWithOutro(form.familiares, form.familiaresOutro) ? `antecedentes familiares de ${lowerFirst(joinWithOutro(form.familiares, form.familiaresOutro))}` : ""
+  ].filter(Boolean);
+  return `Antecedentes: ${parts.length ? parts.join("; ") : "sem antecedentes informados"}.`;
+}
+
+function mentalExamEvolutionText(form) {
+  const findings = mentalStateFindings(form);
+  return `Exame psiquico: Paciente ${findings.length ? formatClinicalList(findings) : "sem alteracoes descritas no exame psiquico"}.`;
+}
+
+function consultationStoryText(form) {
+  const complaint = form.queixa || form.qphda || "";
+  const story = form.historia || (!form.queixa ? "" : form.qphda || "");
+  const fatorText = joinWithOutro(form.fatores, form.fatoresOutro);
+  const melhoraText = joinWithOutro(form.fatoresMelhora, form.fatoresMelhoraOutro);
+  const impactoText = joinValues(form.impacto);
+  const parts = [
+    complaint
+      ? `Comparece para avaliacao psiquiatrica com queixa principal de ${stripFinalPeriod(complaint)}.`
+      : "Comparece para avaliacao psiquiatrica.",
+    story ? `Relata que ${lowerFirst(stripFinalPeriod(story))}.` : "",
+    fatorText ? `Quadro associado ou desencadeado por ${lowerFirst(fatorText)}.` : "",
+    melhoraText ? improvementSentence(melhoraText) : "",
+    impactoText ? `Descreve o impacto funcional como ${lowerFirst(impactoText)}.` : ""
+  ].filter(Boolean);
+  return parts.join(" ");
+}
+
+function returnStoryText(form, previous) {
+  const parts = [
+    previous ? `Retorna apos registro previo de ${new Date(previous.createdAt || Date.now()).toLocaleDateString("pt-BR")}.` : "Comparece para retorno psiquiatrico.",
+    form.estadoGeral ? `Evolucao global: ${form.estadoGeral.toLowerCase()}.` : "",
+    form.sintomasPrincipais ? `Sintomas principais: ${form.sintomasPrincipais.toLowerCase()}.` : "",
+    form.observacoesRetorno ? `Observacoes clinicas: ${form.observacoesRetorno}` : ""
+  ].filter(Boolean);
+  return parts.join(" ");
+}
+
+function historyText(form) {
+  return [
+    joinValues(form.psiPrevios) && `diagnosticos psiquiatricos previos: ${joinValues(form.psiPrevios)}`,
+    joinValues(form.tratamentos) && `tratamentos previos: ${joinValues(form.tratamentos)}`,
+    joinValues(form.medicos) && `antecedentes medicos: ${joinValues(form.medicos)}`,
+    joinValues(form.familiares) && `antecedentes familiares: ${joinValues(form.familiares)}`
+  ].filter(Boolean).join("; ");
+}
+
+function mentalStateText(form) {
+  const findings = mentalStateFindings(form);
+  return findings.length ? formatClinicalList(findings) : "";
+}
+
+function mentalStateFindings(form) {
+  const groups = ["aparencia", "consciencia", "atencao", "orientacao", "memoria", "sensopercepcao", "pensamentoCursoForma", "pensamentoConteudo", "linguagem", "humor", "afeto", "psicomotricidadeVontade", "juizoCritico"];
+  return groups
+    .flatMap(key => clinicalValueList(form[key], form[`${key}Outro`]))
+    .filter(Boolean);
 }
 
 function openEntry(id, type) {

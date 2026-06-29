@@ -16,26 +16,14 @@ const consultationPages = [
   ["anamnese", "Anamnese"],
   ["antecedentes", "Antecedentes"],
   ["psiquico", "Exame psiquico"],
-    ["diagnostico", "Diagnostico"],
+  ["diagnostico", "Diagnostico"],
   ["tratamento", "Tratamento"],
-  ["medicamentos", "Medicamentos"],
-  ["evolucao", "Evolucao"]
+  ["evolucao", "Evolucao"],
+  ["medicamentos", "Medicamentos"]
 ];
 const returnPages = [
   ["evolucao-retorno", "Evolucao"],
   ["texto-retorno", "Texto final"]
-];
-const aiDiagnosticAgents = [
-  "ChatGPT",
-  "Claude",
-  "Gemini",
-];
-const aiTreatmentOptions = [
-  { agent: "ChatGPT", model: "GPT-4.1" },
-  { agent: "ChatGPT", model: "GPT-4o" },
-  { agent: "Claude", model: "Sonnet 4" },
-  { agent: "Gemini", model: "2.5 Pro" },
-  { agent: "Perplexity", model: "Sonar Pro" },
 ];
 const mentalExamQuestions = {
   aparencia: `O que observar: O paciente esta acordado e alerta? A higiene esta preservada? Como ele se veste?
@@ -370,16 +358,11 @@ function consultationPageBody(form, patient) {
   if (consultationPage === "anamnese") return clinicalPage("A. Anamnese", `
     <div class="clinical-card qphda-card">
       <h4>QP e HDA</h4>
-      ${voiceTextarea("qphda", "Queixa principal (QP) e historia da doenca atual (HDA)", qphda, "Registrar QP nas palavras do paciente e HDA com cronologia dos sintomas, relacao temporal com eventos vitais, sintomas fisicos associados, fatores desencadeantes, fatores de melhora/piora, uso de substancias, sintomas positivos e negativos, impacto funcional e tratamentos previos.")}
+      ${voiceTextarea("qphda", "Queixa principal (QP) e historia da doenca atual (HDA)", qphda, "Registrar QP nas palavras do paciente e HDA com cronologia dos sintomas, relacao temporal com eventos vitais, sintomas fisicos associados, fatores desencadeantes e de piora, fatores de melhora, uso de substancias, sintomas positivos e negativos, impacto funcional e tratamentos previos.")}
     </div>
     ${anamnesisQuestionGuide()}
-    <div class="grid">
-      ${selectFieldWithOther("inicio", "Inicio", optionGroups.inicio, form.inicio)}
-      ${selectFieldWithOther("curso", "Curso", optionGroups.curso, form.curso)}
-    </div>
-    ${chips("fatores", "Fatores desencadeantes", optionGroups.fatores, form.fatores)}
+    ${chips("fatores", "Fatores desencadeantes e de piora", optionGroups.fatores, form.fatores)}
     ${chips("fatoresMelhora", "Fatores de melhora", optionGroups.fatoresMelhora, form.fatoresMelhora)}
-    ${chips("fatoresPiora", "Fatores de piora", optionGroups.fatoresPiora, form.fatoresPiora)}
     ${chips("impacto", "Impacto funcional", optionGroups.impacto, form.impacto)}
   `, "consultation");
   if (consultationPage === "antecedentes") return clinicalPage("Antecedentes", `
@@ -387,13 +370,15 @@ function consultationPageBody(form, patient) {
     ${chips("tratamentos", "Tratamentos previos", optionGroups.tratamentos, form.tratamentos)}
     ${textarea("medicos", "Antecedentes medicos", joinValues(form.medicos), "", 2)}
     ${chips("familiares", "Antecedentes familiares", optionGroups.familiares, form.familiares)}
+    ${chips("substancias", "Habitos, substancias e comportamentos aditivos", optionGroups.substancias, form.substancias)}
   `, "consultation");
   if (consultationPage === "psiquico") return clinicalPage("B. Exame psiquico", mentalExamBody(form), "consultation");
-  if (consultationPage === "neurologico") return clinicalPage("C. Exame fisico e neurologico", neurologicExamBody(form), "consultation");
-  if (consultationPage === "diagnostico") return clinicalPage("D. Diagnostico e diferenciais", diagnosisModule(form), "consultation");
-  if (consultationPage === "tratamento") return clinicalPage("E. Tratamento e orientacoes", treatmentModule(form), "consultation");
-  if (consultationPage === "medicamentos") return clinicalPage("Medicamentos", medicationBody(form), "consultation");
-  return clinicalPage("F. Evolucao do Paciente", evolutionBody(form, patient), "consultation");
+  if (consultationPage === "neurologico") return clinicalPage("D. Exame fisico e neurologico", neurologicExamBody(form), "consultation");
+  if (consultationPage === "diagnostico") return clinicalPage("C. Diagnostico e diferenciais", diagnosisModule(form), "consultation");
+  if (consultationPage === "tratamento") return clinicalPage("D. Tratamento e orientacoes", treatmentModule(form), "consultation");
+  if (consultationPage === "evolucao") return clinicalPage("E. Evolucao do Paciente", evolutionBody(form, patient), "consultation");
+  if (consultationPage === "medicamentos") return clinicalPage("F. Medicamentos", medicationBody(form), "consultation");
+  return clinicalPage("E. Evolucao do Paciente", evolutionBody(form, patient), "consultation");
 }
 
 function returnPageBody(form, patient, previous) {
@@ -453,65 +438,76 @@ function neurologicExamBody(form) {
 
 function diagnosisTreatment(form) {
   return `
-    ${section("D. Diagnostico e diferenciais", diagnosisModule(form))}
-    ${section("E. Tratamento e orientacoes com auxilio de IA", treatmentModule(form))}
+    ${section("E. Diagnostico e diferenciais", diagnosisModule(form))}
+    ${section("F. Tratamento e orientacoes", treatmentModule(form))}
   `;
 }
 
 function diagnosisModule(form) {
+  const options = diagnosticOptionLines(form);
+  const selectedValues = selectedDiagnosisValues(form);
+  const selectedText = selectedDiagnosisText(form);
   return `
     <div class="diagnosis-ai-panel">
-      <div class="grid">
-        ${selectField("aiDiagnosticAgent", "Agente de IA para gerar diagnosticos", aiDiagnosticAgents, form.aiDiagnosticAgent || "ChatGPT")}
-        <label>Modelo/versao
-          <input name="aiDiagnosticModel" value="${escapeAttr(form.aiDiagnosticModel || "")}" placeholder="Ex.: GPT-4.1, Claude Sonnet, Gemini Pro" />
-        </label>
-      </div>
       <div class="actions">
-        <button class="primary" type="button" data-action="generate-diagnosis">Gerar diagnosticos por IA</button>
+        <button class="primary" type="button" data-action="generate-diagnosis">Gerar 5 hipoteses</button>
+        <button class="secondary" type="button" data-action="copy-ai-prompt" data-prompt-kind="diagnosis">Copiar prompt para IA</button>
       </div>
-      <div class="warning">Sugestoes geradas a partir da anamnese e do exame psiquico preenchidos. Revisao e decisao final permanecem do medico.</div>
+      ${form.aiStatus ? `<p class="online-status">${escapeHtml(form.aiStatus)}</p>` : ""}
     </div>
-    ${textarea("diagnosticoManual", "Hipotese diagnostica principal gerada por IA, com CID-11 e DSM-5-TR", form.diagnosticoManual, "Clique em gerar diagnosticos por IA.")}
-    ${textarea("diferenciais", "Diagnosticos diferenciais gerados por IA, com CID-11 e DSM-5-TR", form.diferenciais, "Clique em gerar diagnosticos por IA.")}
-    <div class="info-box doctor-note">
-      ${textarea("diagnosticoObservacaoMedica", "Observacao adicional do medico", form.diagnosticoObservacaoMedica, "Acrescente observacoes, ressalvas, hipoteses alternativas ou plano de investigacao.")}
+    <textarea hidden name="diagnosticoManual">${escapeHtml(selectedText)}</textarea>
+    <textarea hidden name="diagnosticoAiOpcoes">${escapeHtml(options.join("\n"))}</textarea>
+    <div class="diagnosis-options">
+      ${options.map((option, index) => `
+        <label class="diagnosis-option">
+          <input type="checkbox" name="diagnosticoSelecionado" value="${escapeAttr(option)}" ${selectedValues.includes(option) ? "checked" : ""} />
+          <span>${index + 1}. ${escapeHtml(option)}</span>
+        </label>
+      `).join("")}
     </div>
-  `;
-}
-
-function treatmentModule(form) {
-  return `
-    <div class="diagnosis-ai-panel">
-      <div class="ai-toolbar">
-        ${selectField("aiTreatmentOption", "Agente e modelo de IA", aiTreatmentOptions.map(aiOptionLabel), form.aiTreatmentOption || aiOptionLabel(aiTreatmentOptions[0]))}
-        <button class="primary" type="button" data-action="generate-treatment">Gerar tratamento e orientacoes por IA</button>
-      </div>
-      <div class="warning">Sugestao de apoio clinico. Ajuste dose, exames, encaminhamentos, risco, consentimento e retorno conforme avaliacao medica.</div>
-    </div>
-    <div class="treatment-card-grid">
-      <div class="treatment-card">
-        <h4>1. Tratamento medicamentoso</h4>
-        ${textarea("tratamentoMedicamentoso", "Drogas sugeridas, alternativas, dose inicial e progressao", form.tratamentoMedicamentoso || form.conduta)}
-      </div>
-      <div class="treatment-card">
-        <h4>2. Outras abordagens terapeuticas</h4>
-        ${textarea("abordagensTerapeuticas", "Psicoterapia, psicoeducacao, sono, rotina, familia, substancias e outras intervencoes", form.abordagensTerapeuticas)}
-      </div>
-      <div class="treatment-card">
-        <h4>3. Exames laboratoriais sugeridos</h4>
-        ${textarea("examesLaboratoriais", "Exames sugeridos conforme diagnostico, comorbidades e medicacoes", form.examesLaboratoriais)}
-      </div>
-      <div class="treatment-card">
-        <h4>4. Preenchimento pelo medico</h4>
-        ${textarea("condutaMedica", "Conduta final, ajustes clinicos, riscos, consentimento, encaminhamentos e retorno", form.condutaMedica)}
-      </div>
+    <label>Minhas hipoteses
+      <textarea name="diagnosticoSelecionadoResumo" rows="5" readonly placeholder="Marque uma ou mais hipoteses acima.">${escapeHtml(selectedText)}</textarea>
+    </label>
+    <div class="diagnosis-manual-extra">
+      ${textarea("diagnosticoObservacaoMedica", "Outras hipoteses acrescentadas pelo medico", form.diagnosticoObservacaoMedica, "Acrescente uma ou mais hipoteses nao contempladas pela IA.")}
     </div>
   `;
 }
 
 function medicationModule(form) {
   return section("Medicamentos", medicationBody(form));
+}
+
+function treatmentModule(form) {
+  const examesText = joinWithOutro(form.examesSolicitados, form.examesSolicitadosOutro);
+  return `
+    <div class="diagnosis-ai-panel">
+      <div class="actions">
+        <button class="primary" type="button" data-action="generate-treatment">Gerar tratamento</button>
+        <button class="secondary" type="button" data-action="copy-ai-prompt" data-prompt-kind="treatment">Copiar prompt para IA</button>
+      </div>
+      ${form.treatmentStatus ? `<p class="online-status">${escapeHtml(form.treatmentStatus)}</p>` : ""}
+    </div>
+    <div class="treatment-card-grid">
+      <div class="treatment-card">
+        <h4>1. Tratamento medicamentoso</h4>
+        ${textarea("tratamentoMedicamentoso", "Tratamento medicamentoso baseado somente nas hipoteses diagnosticas", form.tratamentoMedicamentoso)}
+      </div>
+      <div class="treatment-card">
+        <h4>2. Outras abordagens terapeuticas</h4>
+        ${textarea("abordagensTerapeuticas", "Outras abordagens baseadas somente nas hipoteses diagnosticas", form.abordagensTerapeuticas)}
+      </div>
+      <div class="treatment-card">
+        <h4>3. Exames solicitados</h4>
+        ${chips("examesSolicitados", "Principais exames solicitados em psiquiatria", optionGroups.examesPsiquiatria, form.examesSolicitados)}
+        <textarea hidden name="examesLaboratoriais">${escapeHtml(examesText)}</textarea>
+      </div>
+      <div class="treatment-card">
+        <h4>4. Preenchimento pelo medico</h4>
+        ${textarea("condutaMedica", "Conduta final, ajustes clinicos, consentimento, encaminhamentos e retorno", form.condutaMedica)}
+      </div>
+    </div>
+  `;
 }
 
 function medicationBody(form) {
@@ -524,26 +520,28 @@ function medicationBody(form) {
         </label>
         <button class="primary" type="button" data-action="fill-medication-info">Pesquisar online e preencher</button>
       </div>
-      <div class="warning">Precos online variam por CEP, estoque, convenio, PBM e exigencia de receita. Use os links de pesquisa para confirmar valores atuais em Fortaleza antes de orientar o paciente.</div>
-      ${form.medicationOnlineStatus ? `<p class="online-status">${escapeHtml(form.medicationOnlineStatus)}</p>` : ""}
+      <div class="actions">
+        <button class="primary" type="button" data-action="generate-medication-ai">Gerar medicamento com IA real</button>
+        <button class="secondary" type="button" data-action="copy-ai-prompt" data-prompt-kind="medication">Copiar prompt de medicamento para IA</button>
+      </div>
+      ${form.medicationStatus || form.medicationOnlineStatus ? `<p class="online-status">${escapeHtml(form.medicationStatus || form.medicationOnlineStatus)}</p>` : ""}
     </div>
     <div class="medication-card-grid">
       <div class="treatment-card">
-        <h4>Apresentacao e posologia</h4>
-        ${textarea("medicationPresentation", "Apresentacoes, dose inicial, dose usual e progressao", form.medicationPresentation)}
+        <h4>Medicamento</h4>
+        ${textarea("medicationNameText", "Medicamento", form.medicationNameText, "", 3)}
       </div>
       <div class="treatment-card">
-        <h4>Melhores indicacoes</h4>
-        ${textarea("medicationBestUse", "Indicacoes, melhor perfil clinico e observacoes", form.medicationBestUse)}
+        <h4>Dose inicial e progressao</h4>
+        ${textarea("medicationPresentation", "Dose inicial e progressao", form.medicationPresentation)}
       </div>
       <div class="treatment-card">
-        <h4>Efeitos colaterais e cuidados</h4>
-        ${textarea("medicationSafety", "Efeitos comuns, graves, interacoes, contraindicacoes e monitorizacao", form.medicationSafety)}
+        <h4>Principais efeitos colaterais</h4>
+        ${textarea("medicationSafety", "Principais efeitos colaterais", form.medicationSafety)}
       </div>
       <div class="treatment-card">
-        <h4>Precos em Fortaleza</h4>
-        ${textarea("medicationPriceResearch", "Links e observacoes de pesquisa de preco", form.medicationPriceResearch || medicationPriceResearchText(medicationName))}
-        ${field("manualPrice", "Preco/farmacia/observacao manual em Fortaleza", form.manualPrice)}
+        <h4>Observacoes</h4>
+        ${textarea("medicationBestUse", "Observacoes", form.medicationBestUse)}
       </div>
     </div>
     ${medicationName ? medicationSearchLinks(medicationName) : ""}
@@ -551,26 +549,22 @@ function medicationBody(form) {
 }
 
 function evolutionModule(form, patient, previous = null, isReturn = false) {
-  return section(isReturn ? "Evolucao do Retorno" : "F. Evolucao do Paciente", evolutionBody(form, patient, previous, isReturn), true);
+  return section(isReturn ? "Evolucao do Retorno" : "E. Evolucao do Paciente", evolutionBody(form, patient, previous, isReturn), true);
 }
 
 function evolutionBody(form, patient, previous = null, isReturn = false) {
-  const evolution = form.evolution || "";
+  const evolution = outdatedEvolutionText(form.evolution) ? "" : (form.evolution || "");
+  const generatedEvolution = buildEvolutionNarrative(form, patient, previous, isReturn);
   return `
-    <div class="diagnosis-ai-panel">
-      <div class="ai-toolbar">
-        ${selectField("aiEvolutionOption", "Agente e modelo de IA", aiTreatmentOptions.map(aiOptionLabel), form.aiEvolutionOption || aiOptionLabel(aiTreatmentOptions[0]))}
-        <button class="primary" type="button" data-action="generate-evolution">Gerar evolucao com ChatGPT/IA</button>
-      </div>
-      <div class="warning">Rascunho narrativo baseado nos dados preenchidos na consulta, incluindo achados positivos e negativos registrados. Revise linguagem, risco, sigilo e decisao final antes de salvar.</div>
-    </div>
     <div class="actions">
-      <button class="primary" type="submit">${isReturn ? "Salvar retorno" : "Salvar consulta"}</button>
-      <button class="secondary" type="button" data-action="copy-evolution">Copiar texto da evolucao</button>
-      <button class="secondary" type="button" data-action="print-evolution">Imprimir</button>
-      <button class="secondary" type="button" data-action="pdf-evolution">Exportar evolucao em PDF</button>
+      <button class="primary" type="button" data-action="generate-evolution">Atualizar evolução</button>
+      <button class="secondary" type="button" data-action="copy-ai-prompt" data-prompt-kind="evolution">Copiar prompt para IA</button>
     </div>
-    ${textarea("evolution", "Evolucao medica editavel", evolution)}
+    ${form.aiStatus ? `<p class="online-status">${escapeHtml(form.aiStatus)}</p>` : ""}
+    ${textarea("evolution", "Evolução clínica final", evolution || generatedEvolution)}
+    <div class="actions">
+      <button class="primary" type="submit">Salvar consulta no prontuario</button>
+    </div>
   `;
 }
 
@@ -771,6 +765,7 @@ function nextPageForScope(scope) {
 }
 
 function pageStepActions(scope) {
+  if (scope === "consultation" && consultationPage === "evolucao") return "";
   if (!scope || !nextPageForScope(scope)) return "";
   return `<div class="actions page-actions"><button class="primary" type="button" data-action="save-next-page" data-scope="${scope}">Salvar pagina e avancar</button></div>`;
 }
@@ -827,6 +822,11 @@ function bindAutoDraft() {
     form.addEventListener("input", () => updateDraftFromForm(form));
     form.addEventListener("change", event => {
       updateDraftFromForm(form);
+      if (event.target?.name === "diagnosticoSelecionado") {
+        updateSelectedDiagnosisFromForm(form);
+        render();
+        return;
+      }
       if (event.target?.matches?.("input[type='checkbox'][value='Outro'], select")) render();
     });
   });
@@ -873,12 +873,17 @@ function bindConsultForm() {
   if (!form) return;
   form.addEventListener("submit", event => {
     event.preventDefault();
-    const data = { ...draft.consultation, ...formToObject(form), patientId: selectedPatientId, type: "consultation" };
+    if (consultationPage !== "evolucao") {
+      alert("A consulta so sera salva no prontuario ao finalizar a pagina Evolucao.");
+      return;
+    }
+    const data = sanitizeConsultationRecord({ ...draft.consultation, ...formToObject(form), patientId: selectedPatientId, type: "consultation" });
     if (!data.id) data.id = uid("consultation");
     data.updatedAt = new Date().toISOString();
     data.createdAt = data.createdAt || data.updatedAt;
     upsert("consultations", data);
     draft.consultation = defaultConsultation();
+    consultationPage = "anamnese";
     persist();
     view = "record";
     render();
@@ -917,14 +922,14 @@ function bindActions() {
       if (["dashboard", "toggle-theme", "select-patient", "edit-patient"].includes(action)) return;
       if (action === "form-page") switchFormPage(element);
       if (action === "save-next-page") saveCurrentPageAndAdvance(element);
-      if (action === "generate-diagnosis") generateDiagnosisFromClinicalData(element);
-      if (action === "generate-treatment") generateTreatmentFromClinicalData(element);
-      if (action === "generate-evolution") generateEvolutionFromClinicalData(element);
+      if (action === "generate-diagnosis") await generateDiagnosisFromClinicalData(element);
+      if (action === "generate-treatment") await generateTreatmentFromClinicalData(element);
+      if (action === "generate-evolution") await generateEvolutionFromClinicalData(element);
+      if (action === "generate-medication-ai") await generateMedicationFromClinicalData(element);
+      if (action === "copy-ai-prompt") copyClinicalAiPrompt(element);
       if (action === "fill-medication-info") await fillMedicationInfo(element);
       if (action === "clear-patient") { draft.patient = {}; render(); }
       if (action === "delete-patient") deletePatient();
-      if (action === "copy-evolution") copyEvolution();
-      if (action === "print-evolution" || action === "pdf-evolution") printEvolution();
       if (action === "voice") startVoice(element.dataset.target);
       if (action === "edit-current-patient") { view = "patient"; draft.patient = structuredClone(getPatient()); render(); }
       if (action === "open-entry") openEntry(element.dataset.id, element.dataset.type);
@@ -956,42 +961,247 @@ function saveCurrentPageAndAdvance(element) {
   render();
 }
 
-function generateDiagnosisFromClinicalData(element) {
+async function generateDiagnosisFromClinicalData(element) {
   const formElement = element.closest("form");
   if (formElement) updateDraftFromForm(formElement);
   const scope = view === "return" ? "return" : "consultation";
   const target = scope === "return" ? draft.return : draft.consultation;
-  const suggestion = buildDiagnosticSuggestion(target || {});
+  setClinicalAiStatus(scope, "Consultando IA real para diagnostico...");
+  render();
+  let suggestion;
+  try {
+    const context = clinicalAiContext(scope);
+    const { result } = await requestClinicalAi("diagnosis", buildClinicalAiPrompt("diagnosis", context.target, context.patient, context.previous, context.isReturn));
+    const localOptions = buildDiagnosticSuggestion(context.target).diagnosticoAiOpcoes.split("\n").filter(Boolean);
+    const aiOptions = result.options.map(option => `${option.name} - CID-11: ${option.cid11} - DSM-5-TR: ${option.dsm5tr}`);
+    const options = [...aiOptions, ...localOptions]
+      .filter((item, index, list) => list.indexOf(item) === index)
+      .slice(0, 5);
+    suggestion = {
+      diagnosticoAiOpcoes: options.join("\n"),
+      diagnosticoSelecionado: [],
+      diagnosticoManual: "",
+      diferenciais: "",
+      diagnosticoObservacaoMedica: target?.diagnosticoObservacaoMedica || "",
+      aiStatus: "5 hipoteses geradas. Marque uma ou mais para montar suas hipoteses."
+    };
+  } catch (error) {
+    suggestion = { ...buildDiagnosticSuggestion(target || {}), aiStatus: `IA indisponivel: ${error.message}. 5 hipoteses locais aplicadas.` };
+  }
   if (scope === "return") draft.return = { ...(draft.return || {}), ...suggestion };
   else draft.consultation = { ...(draft.consultation || {}), ...suggestion };
   render();
 }
 
-function generateTreatmentFromClinicalData(element) {
+async function generateTreatmentFromClinicalData(element) {
   const formElement = element.closest("form");
   if (formElement) updateDraftFromForm(formElement);
   const scope = view === "return" ? "return" : "consultation";
   const target = scope === "return" ? draft.return : draft.consultation;
-  const suggestion = buildTreatmentSuggestion(target || {});
+  const diagnosisText = treatmentDiagnosisText(target || {});
+  if (!diagnosisText) return alert("Selecione ou acrescente ao menos uma hipotese diagnostica antes de gerar o tratamento.");
+  setClinicalAiStatus(scope, "Consultando IA real para tratamento...");
+  if (scope === "return") draft.return = { ...(draft.return || {}), treatmentStatus: "Consultando IA real para tratamento..." };
+  else draft.consultation = { ...(draft.consultation || {}), treatmentStatus: "Consultando IA real para tratamento..." };
+  render();
+  let suggestion;
+  try {
+    const context = clinicalAiContext(scope);
+    const { result } = await requestClinicalAi("treatment", buildClinicalAiPrompt("treatment", context.target, context.patient, context.previous, context.isReturn));
+    suggestion = {
+      tratamentoMedicamentoso: result.medication || "",
+      abordagensTerapeuticas: result.therapies || "",
+      examesLaboratoriais: joinWithOutro(target?.examesSolicitados, target?.examesSolicitadosOutro),
+      condutaMedica: target?.condutaMedica || "",
+      treatmentStatus: "Tratamento gerado somente a partir das hipoteses diagnosticas.",
+      aiStatus: "Tratamento gerado somente a partir das hipoteses diagnosticas."
+    };
+  } catch (error) {
+    suggestion = { ...buildTreatmentSuggestion(target || {}), treatmentStatus: `IA indisponivel: ${error.message}. Rascunho local aplicado.`, aiStatus: `IA indisponivel: ${error.message}. Rascunho local aplicado.` };
+  }
   if (scope === "return") draft.return = { ...(draft.return || {}), ...suggestion };
   else draft.consultation = { ...(draft.consultation || {}), ...suggestion };
   render();
 }
 
-function generateEvolutionFromClinicalData(element) {
+async function generateEvolutionFromClinicalData(element) {
+  const formElement = element.closest("form");
+  if (formElement) updateDraftFromForm(formElement);
+  const scope = view === "return" ? "return" : "consultation";
+  const target = scope === "return" ? draft.return : draft.consultation;
+  setClinicalAiStatus(scope, "Consultando IA real para evolução clínica...");
+  render();
+  let suggestion;
+  try {
+    const context = clinicalAiContext(scope);
+    const { result } = await requestClinicalAi("evolution", buildClinicalAiPrompt("evolution", context.target, context.patient, context.previous, context.isReturn));
+    const text = result.markdown;
+    suggestion = { evolution: text, aiStatus: "Evolução gerada pela IA real. Revise antes de salvar." };
+  } catch (error) {
+    const context = clinicalAiContext(scope);
+    suggestion = {
+      evolution: buildEvolutionNarrative(target || {}, context.patient, context.previous, context.isReturn),
+      aiStatus: `IA indisponível: ${error.message}. Evolução local aplicada.`
+    };
+  }
+  if (scope === "return") draft.return = { ...(draft.return || {}), ...suggestion };
+  else draft.consultation = { ...(draft.consultation || {}), ...suggestion };
+  render();
+}
+
+async function generateMedicationFromClinicalData(element) {
+  const formElement = element.closest("form");
+  if (formElement) updateDraftFromForm(formElement);
+  const scope = view === "return" ? "return" : "consultation";
+  const target = scope === "return" ? draft.return : draft.consultation;
+  if (!target?.medicationGeneric?.trim()) return alert("Digite o nome do medicamento antes de consultar a IA.");
+  setClinicalAiStatus(scope, "Consultando IA real para medicamento...");
+  if (scope === "return") draft.return = { ...(draft.return || {}), medicationStatus: "Consultando IA real para medicamento..." };
+  else draft.consultation = { ...(draft.consultation || {}), medicationStatus: "Consultando IA real para medicamento..." };
+  render();
+  let suggestion;
+  try {
+    const context = clinicalAiContext(scope);
+    const { result } = await requestClinicalAi("medication", buildClinicalAiPrompt("medication", context.target, context.patient, context.previous, context.isReturn));
+    suggestion = {
+      medicationNameText: result.medication || target.medicationGeneric,
+      medicationPresentation: result.dose_progression || "",
+      medicationSafety: result.side_effects || "",
+      medicationBestUse: result.notes || "",
+      medicationStatus: "Medicamento preenchido nos campos essenciais. Revise com bula vigente.",
+      medicationOnlineStatus: "Resposta de medicamento gerada pela IA real. Revise com bula brasileira e dados do paciente.",
+      aiStatus: "Resposta gerada pela IA real. Revise antes de salvar."
+    };
+  } catch (error) {
+    suggestion = {
+      medicationOnlineStatus: `IA indisponível: ${error.message}. Use pesquisa online ou prompt manual.`,
+      aiStatus: `IA indisponível: ${error.message}.`
+    };
+  }
+  if (scope === "return") draft.return = { ...(draft.return || {}), ...suggestion };
+  else draft.consultation = { ...(draft.consultation || {}), ...suggestion };
+  render();
+}
+
+function clinicalAiContext(scope = view === "return" ? "return" : "consultation") {
+  return {
+    target: scope === "return" ? (draft.return || {}) : (draft.consultation || {}),
+    previous: scope === "return" ? latestEntry(selectedPatientId) : null,
+    patient: getPatient() || {},
+    isReturn: scope === "return"
+  };
+}
+
+function setClinicalAiStatus(scope, message) {
+  if (scope === "return") draft.return = { ...(draft.return || {}), aiStatus: message };
+  else draft.consultation = { ...(draft.consultation || {}), aiStatus: message };
+}
+
+async function requestClinicalAi(kind, prompt) {
+  const response = await fetch("/api/clinical-ai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind, prompt })
+  });
+  let data = {};
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
+  }
+  if (!response.ok) {
+    const detail = data.detail ? ` ${compactText(data.detail, 320)}` : "";
+    throw new Error(`${data.error || "Falha ao consultar o backend."}${detail}`);
+  }
+  const result = validateClinicalAiPayload(kind, data.result, data.text);
+  return {
+    result,
+    text: data.text || clinicalAiTextFromResult(kind, result)
+  };
+}
+
+function validateClinicalAiPayload(kind, result, text = "") {
+  if (!result && text) result = parseFallbackClinicalText(kind, text);
+  if (!result || typeof result !== "object") throw new Error("Resposta estruturada ausente.");
+  if (kind === "diagnosis") {
+    if (!Array.isArray(result.options) || result.options.length !== 5) throw new Error("Diagnostico exige exatamente 5 opcoes.");
+    result.options.forEach(option => {
+      if (!option?.name || !option?.cid11 || !option?.dsm5tr) throw new Error("Opcao diagnostica incompleta.");
+    });
+  }
+  if (kind === "treatment" && (typeof result.medication !== "string" || typeof result.therapies !== "string")) {
+    throw new Error("Tratamento fora do formato esperado.");
+  }
+  if (kind === "evolution" && typeof result.markdown !== "string") throw new Error("Evolucao fora do formato esperado.");
+  if (kind === "medication") {
+    ["medication", "dose_progression", "side_effects", "notes"].forEach(key => {
+      if (typeof result[key] !== "string") throw new Error("Medicamento fora do formato esperado.");
+    });
+  }
+  return result;
+}
+
+function parseFallbackClinicalText(kind, text = "") {
+  if (kind === "diagnosis") {
+    const options = normalizeDiagnosticOptions(text).map(line => {
+      const [namePart, cidPart = "", dsmPart = ""] = line.split(/\s+-\s+/);
+      return {
+        name: stripFinalPeriod(namePart || ""),
+        cid11: stripFinalPeriod(cidPart.replace(/^CID-?11:\s*/i, "")),
+        dsm5tr: stripFinalPeriod(dsmPart.replace(/^DSM-?5-?TR:\s*/i, ""))
+      };
+    });
+    return { options };
+  }
+  if (kind === "treatment") {
+    const parsed = parseTreatmentResponse(text);
+    return { medication: parsed.tratamentoMedicamentoso, therapies: parsed.abordagensTerapeuticas };
+  }
+  if (kind === "evolution") return { markdown: text };
+  if (kind === "medication") {
+    const parsed = parseMedicationResponse(text);
+    return {
+      medication: parsed.medicationNameText,
+      dose_progression: parsed.medicationPresentation,
+      side_effects: parsed.medicationSafety,
+      notes: parsed.medicationBestUse
+    };
+  }
+  return null;
+}
+
+function clinicalAiTextFromResult(kind, result) {
+  if (kind === "diagnosis") {
+    return result.options.map(option => `${option.name} - CID-11: ${option.cid11} - DSM-5-TR: ${option.dsm5tr}`).join("\n");
+  }
+  if (kind === "treatment") return `TRATAMENTO MEDICAMENTOSO:\n${result.medication}\n\nOUTRAS ABORDAGENS:\n${result.therapies}`;
+  if (kind === "evolution") return result.markdown;
+  if (kind === "medication") {
+    return [
+      `MEDICAMENTO:\n${result.medication}`,
+      `DOSE INICIAL E PROGRESSAO:\n${result.dose_progression}`,
+      `PRINCIPAIS EFEITOS COLATERAIS:\n${result.side_effects}`,
+      `OBSERVACOES:\n${result.notes}`
+    ].join("\n\n");
+  }
+  return "";
+}
+
+async function copyClinicalAiPrompt(element) {
   const formElement = element.closest("form");
   if (formElement) updateDraftFromForm(formElement);
   const scope = view === "return" ? "return" : "consultation";
   const target = scope === "return" ? draft.return : draft.consultation;
   const previous = scope === "return" ? latestEntry(selectedPatientId) : null;
   const patient = getPatient() || {};
-  const suggestion = {
-    aiEvolutionOption: target?.aiEvolutionOption || aiOptionLabel(aiTreatmentOptions[0]),
-    evolution: buildEvolutionNarrative(target || {}, patient, previous, scope === "return")
-  };
-  if (scope === "return") draft.return = { ...(draft.return || {}), ...suggestion };
-  else draft.consultation = { ...(draft.consultation || {}), ...suggestion };
-  render();
+  const prompt = buildClinicalAiPrompt(element.dataset.promptKind, target || {}, patient, previous, scope === "return");
+  try {
+    if (!navigator.clipboard) throw new Error("clipboard unavailable");
+    await navigator.clipboard.writeText(prompt);
+    alert("Prompt clínico copiado.");
+  } catch {
+    alert("Nao foi possivel copiar automaticamente. Selecione e copie o texto manualmente apos gerar o rascunho.");
+  }
 }
 
 async function fillMedicationInfo(element) {
@@ -1003,7 +1213,7 @@ async function fillMedicationInfo(element) {
   if (!medicationName.trim()) return alert("Digite o nome do medicamento para pesquisar online.");
   const loading = {
     medicationOnlineStatus: `Pesquisando online: ${medicationName}...`,
-    medicationPriceResearch: medicationPriceResearchText(medicationName)
+    medicationPriceResearch: ""
   };
   if (scope === "return") draft.return = { ...(draft.return || {}), ...loading };
   else draft.consultation = { ...(draft.consultation || {}), ...loading };
@@ -1015,11 +1225,198 @@ async function fillMedicationInfo(element) {
   render();
 }
 
+function buildClinicalAiPrompt(kind, form = {}, patient = {}, previous = null, isReturn = false) {
+  const taskByKind = {
+    diagnosis: [
+      "Liste exatamente as 5 hipoteses diagnosticas psiquiatricas mais provaveis para os dados informados.",
+      "Seja objetivo: nao inclua cabecalho, justificativa, observacoes, ressalvas ou texto introdutorio.",
+      "Cada linha deve conter somente nome do transtorno, CID e DSM-5-TR no formato solicitado."
+    ],
+    treatment: [
+      "Elabore o tratamento somente com base nas hipoteses diagnosticas escolhidas e acrescentadas pelo medico.",
+      "Nao use anamnese, exame psiquico, comorbidades ou dados nao informados para justificar conduta.",
+      "Responda apenas nas duas secoes solicitadas: tratamento medicamentoso e outras abordagens."
+    ],
+    evolution: [
+      "Transforme os dados brutos em uma Evolucao Clinica formal, fluida, tecnica e profissional.",
+      "Use apenas informacoes clinicamente necessarias, sem repeticoes e sem copiar nomes de campos dentro do texto.",
+      "No exame psiquico, escreva achados diretos, por exemplo: memoria preservada, humor depressivo; nao escreva Memoria: memoria preservada.",
+      "Em HD, use apenas as opcoes de Minhas hipoteses. Em Tratamento, use apenas Preenchimento pelo medico e exames solicitados."
+    ],
+    medication: [
+      "Preencha somente os campos solicitados sobre o medicamento informado.",
+      "Seja objetivo e nao inclua preco, links, indicacoes extensas ou cabecalhos adicionais.",
+      "Use linguagem clinica resumida para prontuario."
+    ]
+  };
+  const task = taskByKind[kind] || taskByKind.evolution;
+  return [
+    "Voce e um assistente especializado em psiquiatria, documentacao medica e prontuario eletronico.",
+    "Responda em portugues do Brasil, com linguagem tecnica, clara, objetiva e utilizavel em prontuario.",
+    "Nao invente dados. Quando algo nao estiver informado, sinalize como dado ausente ou necessidade de confirmacao.",
+    "",
+    "TAREFA:",
+    ...task.map(item => `- ${item}`),
+    "",
+    kind === "treatment" ? "HIPOTESES DIAGNOSTICAS:" : "DADOS DO PACIENTE E DA CONSULTA:",
+    kind === "treatment"
+      ? (treatmentDiagnosisText(form) || "nao informado")
+      : kind === "evolution"
+        ? clinicalEvolutionPromptData(form, patient, previous, isReturn)
+        : clinicalPromptData(form, patient, previous, isReturn),
+    "",
+    "FORMATO DA RESPOSTA:",
+    promptResponseFormat(kind)
+  ].join("\n");
+}
+
+function clinicalEvolutionPromptData(form = {}, patient = {}, previous = null, isReturn = false) {
+  return [
+    `Identidade: ${conciseIdentityText(patient)}.`,
+    `Queixa principal: ${conciseComplaintText(form, isReturn)}.`,
+    `HDA: ${conciseHdaText(form, previous, isReturn)}.`,
+    `Antecedentes: ${conciseAntecedentsText(form)}.`,
+    `Exame psiquico: ${conciseMentalExamText(form)}.`,
+    `HD/Minhas hipoteses: ${conciseDiagnosticText(form)}.`,
+    `Preenchimento pelo medico: ${cleanClinicalLine(form.condutaMedica || "") || "nao informado"}.`,
+    `Exames solicitados: ${cleanClinicalLine(joinWithOutro(form.examesSolicitados, form.examesSolicitadosOutro) || form.examesLaboratoriais || "") || "nao informado"}.`
+  ].join("\n");
+}
+
+function clinicalPromptData(form = {}, patient = {}, previous = null, isReturn = false) {
+  return [
+    `Identificacao: ${patientIdentificationText(patient, true)}`,
+    `Tipo de atendimento: ${isReturn ? "retorno" : "consulta inicial/nova consulta"}.`,
+    previous ? `Registro anterior: ${new Date(previous.createdAt || Date.now()).toLocaleDateString("pt-BR")} - ${stripFinalPeriod(previous.evolution || anamnesisText(previous) || previous.observacoesRetorno || "")}.` : "",
+    `QP/HDA: ${stripFinalPeriod(anamnesisText(form)) || "nao informado"}.`,
+    `Fatores associados/desencadeantes: ${joinWithOutro(form.fatores, form.fatoresOutro) || "nao informado"}.`,
+    `Fatores de melhora: ${joinWithOutro(form.fatoresMelhora, form.fatoresMelhoraOutro) || "nao informado"}.`,
+    `Impacto funcional: ${joinValues(form.impacto) || "nao informado"}.`,
+    `Rastreio de mania/hipomania: ${joinWithOutro(form.maniaHipomaniaSintomas, form.maniaHipomaniaSintomasOutro) || "nao informado"}.`,
+    `Rastreio de ansiedade: ${choiceSummary(form, ["ansiedadeFaltaControle", "ansiedadePreocupacaoExcessiva", "ansiedadeTensaoCorporal", "ansiedadeDificuldadeFocar", "ansiedadeAgitacao", "ansiedadeIrritabilidade", "ansiedadeSintomasFisicos"]) || "nao informado"}.`,
+    `Rastreio depressivo: ${choiceSummary(form, ["depressaoPoucoInteressePrazer", "depressaoDesanimoDesesperanca", "depressaoSono", "depressaoEnergia", "depressaoApetite", "depressaoConcentracao", "depressaoFalaLenta", "depressaoAgitacao", "depressaoAutoestimaRuinaEstorvo"]) || "nao informado"}.`,
+    `Risco suicida: ${choiceSummary(form, ["riscoSuicidioIdeacao", "riscoSuicidioPlanejamento", "riscoSuicidioMeios", "riscoSuicidioTentativasPrevias"]) || "nao informado"}. ${form.riscoSuicidioRazoesViver ? `Razoes para viver/fatores protetivos: ${stripFinalPeriod(form.riscoSuicidioRazoesViver)}.` : ""}`,
+    `Antecedentes psiquiatricos: ${joinWithOutro(form.psiPrevios, form.psiPreviosOutro) || "nao informado"}.`,
+    `Tratamentos previos: ${joinWithOutro(form.tratamentos, form.tratamentosOutro) || "nao informado"}.`,
+    `Antecedentes medicos: ${joinWithOutro(form.medicos, form.medicosOutro) || "nao informado"}.`,
+    `Antecedentes familiares: ${joinWithOutro(form.familiares, form.familiaresOutro) || "nao informado"}.`,
+    `Substancias/habitos: ${joinWithOutro(form.substancias, form.substanciasOutro) || joinWithOutro(form.usoSubstanciasComportamentos, form.usoSubstanciasComportamentosOutro) || "nao informado"}.`,
+    `Exame psiquico: ${mentalStateFindings(form).length ? formatClinicalList(mentalStateFindings(form)) : "nao informado"}.`,
+    `Hipoteses diagnosticas selecionadas/acrescentadas: ${stripFinalPeriod(treatmentDiagnosisText(form)) || stripFinalPeriod(form.diagnosticoManual || "") || "nao informado"}.`,
+    `Diagnostico registrado: ${stripFinalPeriod(form.diagnosticoManual || "") || "nao informado"}.`,
+    `Diferenciais registrados: ${stripFinalPeriod(form.diferenciais || "") || "nao informado"}.`,
+    `Tratamento medicamentoso: ${stripFinalPeriod(form.tratamentoMedicamentoso || form.conduta || "") || "nao informado"}.`,
+    `Outras abordagens terapeuticas: ${stripFinalPeriod(form.abordagensTerapeuticas || "") || "nao informado"}.`,
+    `Exames solicitados: ${stripFinalPeriod(joinWithOutro(form.examesSolicitados, form.examesSolicitadosOutro) || form.examesLaboratoriais || "") || "nao informado"}.`,
+    `Conduta medica: ${stripFinalPeriod(form.condutaMedica || "") || "nao informado"}.`,
+    `Medicamento pesquisado: ${stripFinalPeriod(form.medicationGeneric || "") || "nao informado"}.`,
+    `Medicamento/dose/efeitos/observacoes: ${[form.medicationNameText, form.medicationPresentation, form.medicationSafety, form.medicationBestUse].filter(Boolean).map(stripFinalPeriod).join(" | ") || "nao informado"}.`,
+    isReturn ? `Dados de retorno: ${stripFinalPeriod(returnStoryText(form, previous)) || "nao informado"}.` : ""
+  ].filter(Boolean).join("\n");
+}
+
+function choiceSummary(form, keys = []) {
+  return keys
+    .map(key => form[key] ? `${key}: ${form[key]}` : "")
+    .filter(Boolean)
+    .join("; ");
+}
+
+function promptResponseFormat(kind) {
+  if (kind === "diagnosis") {
+    return [
+      "Depressao Maior - CID-11: ... - DSM-5-TR: ...",
+      "Depressao Bipolar - CID-11: ... - DSM-5-TR: ...",
+      "Transtorno de Ansiedade Generalizada - CID-11: ... - DSM-5-TR: ...",
+      "Transtorno do Panico - CID-11: ... - DSM-5-TR: ...",
+      "Transtorno por Uso de Substancias - CID-11: ... - DSM-5-TR: ..."
+    ].join("\n");
+  }
+  if (kind === "treatment") {
+    return [
+      "TRATAMENTO MEDICAMENTOSO:",
+      "",
+      "OUTRAS ABORDAGENS:"
+    ].join("\n");
+  }
+  if (kind === "medication") {
+    return [
+      "MEDICAMENTO:",
+      "",
+      "DOSE INICIAL E PROGRESSAO:",
+      "",
+      "PRINCIPAIS EFEITOS COLATERAIS:",
+      "",
+      "OBSERVACOES:"
+    ].join("\n");
+  }
+  return [
+    "**Identidade**",
+    "",
+    "**Queixa principal**",
+    "",
+    "**HDA**",
+    "",
+    "**Antecedentes**",
+    "",
+    "**Exame Psiquico**",
+    "",
+    "**HD**",
+    "",
+    "**Tratamento**"
+  ].join("\n");
+}
+
+function diagnosticOptionLines(form = {}) {
+  const stored = normalizeDiagnosticOptions(form.diagnosticoAiOpcoes || form.diferenciais || "");
+  if (stored.length) return stored;
+  return buildDiagnosticSuggestion(form).diagnosticoAiOpcoes.split("\n").filter(Boolean);
+}
+
+function selectedDiagnosisValues(form = {}) {
+  const values = Array.isArray(form.diagnosticoSelecionado)
+    ? form.diagnosticoSelecionado
+    : form.diagnosticoSelecionado
+      ? [form.diagnosticoSelecionado]
+      : [];
+  return values.filter(Boolean);
+}
+
+function selectedDiagnosisText(form = {}) {
+  return selectedDiagnosisValues(form).join("\n");
+}
+
+function normalizeDiagnosticOptions(value = "") {
+  const lines = String(value || "")
+    .split(/\r?\n/)
+    .map(line => line.replace(/^\s*(?:[-*]|\d+[.)])\s*/, "").trim())
+    .filter(Boolean)
+    .filter(line => !/^hipotese principal|^justificativa|^diagnosticos diferenciais|^dados ausentes|^alertas/i.test(normalizeText(line)));
+  return lines.slice(0, 5);
+}
+
+function updateSelectedDiagnosisFromForm(form) {
+  const scope = view === "return" ? "return" : "consultation";
+  const selected = Array.from(form.querySelectorAll("input[name='diagnosticoSelecionado']:checked")).map(item => item.value);
+  const selectedText = selected.join("\n");
+  const update = {
+    diagnosticoSelecionado: selected,
+    diagnosticoSelecionadoResumo: selectedText,
+    diagnosticoManual: selectedText
+  };
+  if (scope === "return") draft.return = { ...(draft.return || {}), ...update };
+  else draft.consultation = { ...(draft.consultation || {}), ...update };
+}
+
+function formatDiagnosticOption(item) {
+  return `${item.name} - CID-11: ${item.cid11} - DSM-5-TR: ${item.dsm5tr}`;
+}
+
 function buildDiagnosticSuggestion(form) {
   const qphdaText = anamnesisText(form);
   const sourceText = [
-    qphdaText, form.inicio, form.curso, form.fatoresOutro,
-    joinValues(form.fatores), joinValues(form.fatoresMelhora), joinValues(form.fatoresPiora), joinValues(form.impacto),
+    qphdaText, form.fatoresOutro,
+    joinValues(form.fatores), joinValues(form.fatoresMelhora), joinValues(form.impacto),
     joinValues(form.psiPrevios), joinValues(form.tratamentos), joinValues(form.medicos), joinValues(form.familiares), joinValues(form.substancias),
     joinValues(form.aparencia), joinValues(form.consciencia), joinValues(form.atencao), joinValues(form.orientacao), joinValues(form.memoria), joinValues(form.sensopercepcao),
     joinValues(form.pensamentoCursoForma), joinValues(form.pensamentoConteudo), joinValues(form.linguagem),
@@ -1027,32 +1424,20 @@ function buildDiagnosticSuggestion(form) {
     form.observacoesRetorno
   ].filter(Boolean).join(" | ");
   const text = normalizeText(sourceText);
-  const agent = form.aiDiagnosticAgent || "ChatGPT";
-  const model = form.aiDiagnosticModel?.trim() ? ` (${form.aiDiagnosticModel.trim()})` : "";
   const matches = diagnosticRules()
     .map(rule => ({ ...rule, score: rule.terms.reduce((sum, term) => sum + (text.includes(term) ? 1 : 0), 0) }))
     .filter(rule => rule.score > 0)
     .sort((a, b) => b.score - a.score);
-  const primary = matches[0] || diagnosticRules()[0];
-  const differentials = matches.slice(1, 5);
-  const fallbackDifferentials = diagnosticRules().filter(rule => rule.name !== primary.name).slice(0, 4);
-  const selectedDifferentials = differentials.length ? differentials : fallbackDifferentials;
-  const evidence = summarizeEvidence(form);
+  const ranked = matches.length ? matches : diagnosticRules();
+  const options = [
+    ...ranked,
+    ...diagnosticRules().filter(rule => !ranked.some(item => item.name === rule.name))
+  ].slice(0, 5);
   return {
-    aiDiagnosticAgent: agent,
-    diagnosticoManual: [
-      `Sugestao gerada por ${agent}${model}: ${primary.name}.`,
-      `CID-11: ${primary.cid11}.`,
-      `DSM5 TR: ${primary.dsm5tr}.`,
-      `Elementos utilizados: ${evidence || "anamnese e exame psiquico ainda insuficientes; completar dados clinicos antes de concluir."}`,
-      "Conduta: confirmar criterios diagnosticos, duracao, prejuizo funcional, exclusoes clinicas/substancias e risco antes de registrar o diagnostico definitivo."
-    ].join("\n"),
-    diferenciais: selectedDifferentials.map((item, index) => [
-      `${index + 1}. ${item.name}`,
-      `CID-11: ${item.cid11}.`,
-      `DSM5 TR: ${item.dsm5tr}.`,
-      `Diferenciar por: ${item.differential}.`
-    ].join("\n")).join("\n\n"),
+    diagnosticoAiOpcoes: options.map(formatDiagnosticOption).join("\n"),
+    diagnosticoSelecionado: selectedDiagnosisValues(form),
+    diagnosticoManual: selectedDiagnosisText(form),
+    diferenciais: "",
     diagnosticoObservacaoMedica: form.diagnosticoObservacaoMedica || ""
   };
 }
@@ -1068,10 +1453,11 @@ async function buildMedicationAutofill(typedName = "") {
 
   return {
     medicationGeneric: searchName,
+    medicationNameText: rxnav.name || searchName,
     medicationPresentation: medicationOnlinePresentationText(searchName, rxnav, label),
-    medicationBestUse: medicationOnlineBestUseText(searchName, label),
     medicationSafety: medicationOnlineSafetyText(label),
-    medicationPriceResearch: medicationPriceResearchText(searchName),
+    medicationBestUse: medicationOnlineBestUseText(searchName, label),
+    medicationPriceResearch: "",
     medicationOnlineStatus: sourceStatus
   };
 }
@@ -1171,17 +1557,6 @@ function compactText(value, maxLength = 900) {
   return `${text.slice(0, maxLength).trim()}...`;
 }
 
-function medicationPriceResearchText(medicationName = "") {
-  if (!medicationName) return "";
-  const links = medicationPriceLinks(medicationName);
-  return [
-    `Pesquisa de preco em Fortaleza para: ${medicationName}.`,
-    "Confirmar valor final com CEP/localizacao, estoque, desconto, PBM/convenio e apresentacao exata.",
-    "",
-    ...links.map(link => `- ${link.label}: ${link.url}`)
-  ].join("\n");
-}
-
 function medicationPriceLinks(medicationName = "") {
   const query = encodeURIComponent(`${medicationName} preco Fortaleza`);
   const pharmacyQuery = encodeURIComponent(medicationName);
@@ -1200,68 +1575,45 @@ function medicationSearchLinks(medicationName) {
 }
 
 function buildTreatmentSuggestion(form) {
-  const selectedOption = selectedAiTreatmentOption(form.aiTreatmentOption);
-  const agentModel = aiOptionLabel(selectedOption);
-  const evidence = summarizeEvidence(form);
-  const diagnosisText = normalizeText([
-    form.diagnosticoManual,
-    form.diferenciais,
-    form.diagnosticoObservacaoMedica,
-  ].filter(Boolean).join(" | "));
-  const plan = treatmentPlanForDiagnosis(diagnosisText);
-  const riskTerms = normalizeText([
-    anamnesisText(form),
-    joinValues(form.eventos),
-    joinValues(form.pensamentoCursoForma),
-    joinValues(form.pensamentoConteudo),
-    form.observacoesRetorno,
-  ].filter(Boolean).join(" | "));
-  const hasRisk = ["ideacao suicida", "tentativa de suicidio", "autoagressao", "risco", "morte"].some(term => riskTerms.includes(term));
-
+  const diagnosisText = treatmentDiagnosisText(form);
+  const plan = treatmentPlanForDiagnosis(normalizeText(diagnosisText));
   return {
-    aiTreatmentOption: agentModel,
-    tratamentoMedicamentoso: [
-      `Sugestao gerada por ${agentModel}, baseada no diagnostico informado.`,
-      `Hipotese usada: ${plan.label}.`,
-      "",
-      ...plan.medications,
-      "",
-      "Cuidados antes de prescrever:",
-      "- Conferir diagnostico, comorbidades, medicamentos em uso, alergias, idade, gestacao/lactacao, funcao hepatica/renal, risco de interacoes e preferencias do paciente.",
-      "- Registrar dose inicial, alvo, ritmo de titulacao, efeitos adversos esperados, sinais de alarme e plano de contato."
-    ].join("\n"),
-    abordagensTerapeuticas: [
-      `Base clinica utilizada: ${evidence || "dados clinicos ainda insuficientes; completar anamnese, exame psiquico e avaliacao de risco antes de finalizar."}`,
-      "",
-      ...plan.therapies,
-      "- Psicoeducacao sobre diagnostico, adesao, sinais de alerta, sono, rotina, atividade fisica progressiva e reducao/abstinencia de alcool e outras substancias conforme o caso.",
-      hasRisk
-        ? "- Risco identificado nos dados informados: realizar estratificacao formal, plano de seguranca, rede de apoio e considerar urgencia/emergencia se risco atual."
-        : "- Reavaliar ideacao suicida, autoagressao, sintomas psicoticos, impulsividade, uso de substancias e suporte familiar em cada contato."
-    ].join("\n"),
-    examesLaboratoriais: [
-      ...plan.exams,
-      "- Considerar exames adicionais conforme idade, comorbidades, sinais fisicos, uso de psicofarmacos e risco metabolico/cardiovascular."
-    ].join("\n"),
-    condutaMedica: [
-      "Conduta final do medico:",
-      "- Confirmar criterios diagnosticos, gravidade, duracao, prejuizo funcional e exclusoes clinicas/substancias.",
-      "- Ajustar escolha terapeutica ao perfil do paciente e documentar decisao compartilhada.",
-      "- Definir retorno conforme gravidade, tolerabilidade, adesao e necessidade de monitorizacao."
-    ].join("\n"),
-    conduta: [
-      `Sugestao gerada por ${agentModel}.`,
-      `Hipotese usada: ${plan.label}.`,
-      "",
-      "Plano medicamentoso:",
-      ...plan.medications,
-      "",
-      "Outras abordagens:",
-      ...plan.therapies,
-      "",
-      "Exames:",
-      ...plan.exams
-    ].join("\n")
+    tratamentoMedicamentoso: diagnosisText ? plan.medications.join("\n") : "",
+    abordagensTerapeuticas: diagnosisText ? plan.therapies.join("\n") : "",
+    examesLaboratoriais: joinWithOutro(form.examesSolicitados, form.examesSolicitadosOutro),
+    condutaMedica: form.condutaMedica || "",
+    conduta: ""
+  };
+}
+
+function treatmentDiagnosisText(form = {}) {
+  return [
+    selectedDiagnosisText(form),
+    stripFinalPeriod(form.diagnosticoObservacaoMedica || "")
+  ].filter(Boolean).join("\n");
+}
+
+function parseTreatmentResponse(text = "") {
+  const clean = String(text || "").trim();
+  const medMatch = clean.match(/TRATAMENTO MEDICAMENTOSO:\s*([\s\S]*?)(?:\n\s*OUTRAS ABORDAGENS:|$)/i);
+  const therapyMatch = clean.match(/OUTRAS ABORDAGENS:\s*([\s\S]*)$/i);
+  return {
+    tratamentoMedicamentoso: medMatch?.[1]?.trim() || "",
+    abordagensTerapeuticas: therapyMatch?.[1]?.trim() || ""
+  };
+}
+
+function parseMedicationResponse(text = "") {
+  const clean = String(text || "").trim();
+  const medication = clean.match(/MEDICAMENTO:\s*([\s\S]*?)(?:\n\s*DOSE INICIAL E PROGRESSAO:|$)/i);
+  const dose = clean.match(/DOSE INICIAL E PROGRESSAO:\s*([\s\S]*?)(?:\n\s*PRINCIPAIS EFEITOS COLATERAIS:|$)/i);
+  const safety = clean.match(/PRINCIPAIS EFEITOS COLATERAIS:\s*([\s\S]*?)(?:\n\s*OBSERVACOES:|$)/i);
+  const notes = clean.match(/OBSERVACOES:\s*([\s\S]*)$/i);
+  return {
+    medicationNameText: medication?.[1]?.trim() || "",
+    medicationPresentation: dose?.[1]?.trim() || "",
+    medicationSafety: safety?.[1]?.trim() || "",
+    medicationBestUse: notes?.[1]?.trim() || ""
   };
 }
 
@@ -1367,55 +1719,292 @@ function treatmentPlanForDiagnosis(diagnosisText) {
 }
 
 function buildEvolutionNarrative(form, patient = {}, previous = null, isReturn = false) {
-  const agentModel = form.aiEvolutionOption || aiOptionLabel(aiTreatmentOptions[0]);
-  const identification = patientIdentificationText(patient);
-  const clinicalStory = isReturn ? returnStoryText(form, previous) : consultationStoryText(form);
-  const history = historyText(form);
-  const mentalState = mentalStateText(form);
-  const negatives = relevantNegativeText(form);
-  const complementary = complementaryText(form);
-  const diagnosis = diagnosisText(form);
-  const plan = planText(form);
-  const closing = isReturn
-    ? "Mantem-se acompanhamento longitudinal, com orientacao para retorno antecipado em caso de piora clinica, efeitos adversos relevantes, risco ou duvidas quanto ao tratamento."
-    : "Paciente orientado(a) quanto a hipoteses diagnosticas, opcoes terapeuticas, sinais de alerta, necessidade de seguimento e revisao do plano conforme evolucao clinica.";
-
   return [
-    `Evolucao medica auxiliada por IA (${agentModel}) - rascunho para revisao medica.`,
-    "",
-    `${identification} ${clinicalStory}`.trim(),
-    history,
-    mentalState,
-    negatives,
-    complementary,
-    diagnosis,
-    plan,
-    closing
-  ].filter(Boolean).join("\n\n");
+    markdownEvolutionItem("Identidade", conciseIdentityText(patient)),
+    markdownEvolutionItem("Queixa principal", conciseComplaintText(form, isReturn)),
+    markdownEvolutionItem("HDA", conciseHdaText(form, previous, isReturn)),
+    markdownEvolutionItem("Antecedentes", conciseAntecedentsText(form)),
+    markdownEvolutionItem("Exame Psíquico", conciseMentalExamText(form)),
+    markdownEvolutionItem("HD", conciseDiagnosticText(form)),
+    markdownEvolutionItem("Tratamento", conciseTreatmentText(form))
+  ].join("\n\n");
 }
 
-function patientIdentificationText(patient = {}) {
+function markdownEvolutionItem(title, body) {
+  return `**${title}**\n\n${stripFinalPeriod(body) || "Não informado"}.`;
+}
+
+function conciseIdentityText(patient = {}) {
+  return stripFinalPeriod(patientIdentificationText(patient, true)) || "Paciente com dados de identificação não preenchidos";
+}
+
+function conciseComplaintText(form = {}, isReturn = false) {
+  if (isReturn) return stripFinalPeriod(form.sintomasPrincipais || form.observacoesRetorno || "Queixa de retorno não informada");
+  const qphda = anamnesisText(form);
+  return cleanClinicalLine(form.queixa || firstLineFromQphda(qphda) || "Queixa principal não informada");
+}
+
+function conciseHdaText(form = {}, previous = null, isReturn = false) {
+  if (isReturn) return cleanClinicalLine(returnStoryText(form, previous) || "História do retorno não informada");
+  const qphda = anamnesisText(form);
+  const story = form.historia || remainingQphdaText(qphda, form.queixa);
+  return cleanClinicalLine(story || "História da doença atual não informada");
+}
+
+function conciseAntecedentsText(form = {}) {
+  const parts = [
+    joinWithOutro(form.psiPrevios, form.psiPreviosOutro) ? `antecedentes psiquiátricos de ${lowerFirst(joinWithOutro(form.psiPrevios, form.psiPreviosOutro))}` : "",
+    joinWithOutro(form.tratamentos, form.tratamentosOutro) ? `tratamentos prévios com ${lowerFirst(joinWithOutro(form.tratamentos, form.tratamentosOutro))}` : "",
+    joinWithOutro(form.medicos, form.medicosOutro) ? `antecedentes médicos de ${lowerFirst(joinWithOutro(form.medicos, form.medicosOutro))}` : "",
+    joinWithOutro(form.familiares, form.familiaresOutro) ? `histórico familiar de ${lowerFirst(joinWithOutro(form.familiares, form.familiaresOutro))}` : "",
+    joinWithOutro(form.substancias, form.substanciasOutro) ? `uso/hábitos: ${lowerFirst(joinWithOutro(form.substancias, form.substanciasOutro))}` : ""
+  ].filter(Boolean);
+  return parts.length ? parts.join("; ") : "Sem antecedentes relevantes informados";
+}
+
+function conciseMentalExamText(form = {}) {
+  const findings = [
+    ...clinicalValueList(form.aparencia, form.aparenciaOutro),
+    ...clinicalValueList(form.consciencia, form.conscienciaOutro),
+    ...clinicalValueList(form.atencao, form.atencaoOutro),
+    ...clinicalValueList(form.orientacao, form.orientacaoOutro),
+    ...clinicalValueList(form.memoria, form.memoriaOutro),
+    ...clinicalValueList(form.sensopercepcao, form.sensopercepcaoOutro),
+    ...clinicalValueList(form.pensamentoCursoForma, form.pensamentoCursoFormaOutro),
+    ...clinicalValueList(form.pensamentoConteudo, form.pensamentoConteudoOutro),
+    ...clinicalValueList(form.linguagem, form.linguagemOutro),
+    ...clinicalValueList(form.humor, form.humorOutro),
+    ...clinicalValueList(form.afeto, form.afetoOutro),
+    ...clinicalValueList(form.psicomotricidadeVontade, form.psicomotricidadeVontadeOutro),
+    ...clinicalValueList(form.juizoCritico, form.juizoCriticoOutro)
+  ].map(cleanClinicalLine).filter(Boolean);
+  return findings.length ? formatClinicalList(findings) : "Sem alterações descritas no exame psíquico";
+}
+
+function conciseDiagnosticText(form = {}) {
+  const selected = selectedDiagnosisText(form) || form.diagnosticoSelecionadoResumo || form.diagnosticoManual || "";
+  return cleanClinicalLine(selected || "Hipóteses diagnósticas não selecionadas");
+}
+
+function conciseTreatmentText(form = {}) {
+  const selectedExams = joinWithOutro(form.examesSolicitados, form.examesSolicitadosOutro) || form.examesLaboratoriais;
+  const parts = [
+    form.condutaMedica ? cleanClinicalLine(form.condutaMedica) : "",
+    selectedExams ? `Exames solicitados: ${cleanClinicalLine(selectedExams)}` : ""
+  ].filter(Boolean);
+  return parts.length ? parts.join(". ") : "Conduta médica e exames não registrados";
+}
+
+function cleanClinicalLine(value = "") {
+  return stripFinalPeriod(value)
+    .replace(/^\s*(QP|HDA)\s*:\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function clinicalIdentificationText(patient = {}) {
+  return patientIdentificationText(patient, true) || "Paciente com dados de identificação ainda não preenchidos.";
+}
+
+function clinicalAnamnesisSection(form, previous = null, isReturn = false) {
+  if (isReturn) return polishClinicalText(returnAnamnesisSection(form, previous));
+  const qphda = anamnesisText(form);
+  const complaint = stripFinalPeriod(form.queixa || firstLineFromQphda(qphda));
+  const story = stripFinalPeriod(form.historia || remainingQphdaText(qphda, form.queixa));
+  const fatorText = joinWithOutro(form.fatores, form.fatoresOutro);
+  const melhoraText = joinWithOutro(form.fatoresMelhora, form.fatoresMelhoraOutro);
+  const impactoText = joinValues(form.impacto);
+  const structured = structuredAnamnesisText(form);
+  const parts = [
+    complaint ? `Comparece ao servico queixando-se de ${lowerFirst(complaint)}.` : "Comparece ao servico para avaliacao psiquiatrica.",
+    story ? `Relata ${lowerFirst(story)}.` : "",
+    structured,
+    fatorText ? `Identifica ${lowerFirst(fatorText)} como fatores associados, desencadeantes ou de piora do quadro.` : "",
+    melhoraText ? improvementSentence(melhoraText) : "",
+    impactoText ? `Refere impacto funcional ${lowerFirst(impactoText)}.` : ""
+  ].filter(Boolean);
+  return polishClinicalText(parts.join(" "));
+}
+
+function returnAnamnesisSection(form, previous) {
+  const parts = [
+    previous ? `Retorna apos avaliacao registrada em ${new Date(previous.createdAt || Date.now()).toLocaleDateString("pt-BR")}.` : "Comparece para retorno psiquiatrico.",
+    form.estadoGeral ? `Refere evolucao global ${form.estadoGeral.toLowerCase()} desde a ultima avaliacao.` : "",
+    form.sintomasPrincipais ? `Quanto aos sintomas principais, informa ${lowerFirst(stripFinalPeriod(form.sintomasPrincipais))}.` : "",
+    form.sonoRetorno ? `Sono descrito como ${lowerFirst(stripFinalPeriod(form.sonoRetorno))}.` : "",
+    form.humorRetorno ? `Humor predominante ${lowerFirst(stripFinalPeriod(form.humorRetorno))}.` : "",
+    form.ansiedadeRetorno ? `Ansiedade ${lowerFirst(stripFinalPeriod(form.ansiedadeRetorno))}.` : "",
+    form.funcionalidade ? `Funcionalidade ${lowerFirst(stripFinalPeriod(form.funcionalidade))}.` : "",
+    form.adesao ? `Adesao ao tratamento ${lowerFirst(stripFinalPeriod(form.adesao))}.` : "",
+    joinValues(form.efeitos) ? `Efeitos colaterais registrados: ${joinValues(form.efeitos)}.` : "",
+    joinValues(form.eventos) ? `Eventos relevantes no periodo: ${joinValues(form.eventos)}.` : "",
+    form.observacoesRetorno ? `Observacoes clinicas adicionais: ${stripFinalPeriod(form.observacoesRetorno)}.` : ""
+  ].filter(Boolean);
+  return parts.join(" ") || "Dados de retorno ainda nao preenchidos.";
+}
+
+function structuredAnamnesisText(form) {
+  const parts = [
+    joinWithOutro(form.maniaHipomaniaSintomas, form.maniaHipomaniaSintomasOutro) ? `Durante o rastreio de sintomas de ativacao do humor, foram registrados: ${lowerFirst(joinWithOutro(form.maniaHipomaniaSintomas, form.maniaHipomaniaSintomasOutro))}.` : "",
+    positiveChoiceText(form, [
+      ["ansiedadeFaltaControle", "dificuldade de controlar preocupacoes"],
+      ["ansiedadePreocupacaoExcessiva", "preocupacao excessiva"],
+      ["ansiedadeTensaoCorporal", "tensao corporal"],
+      ["ansiedadeDificuldadeFocar", "dificuldade de concentracao"],
+      ["ansiedadeAgitacao", "inquietacao psicomotora"],
+      ["ansiedadeIrritabilidade", "irritabilidade"],
+      ["ansiedadeSintomasFisicos", "sintomas autonomicos associados"]
+    ], "No rastreio ansioso, observam-se"),
+    positiveChoiceText(form, [
+      ["depressaoPoucoInteressePrazer", "anedonia ou reducao de interesse"],
+      ["depressaoDesanimoDesesperanca", "desanimo e desesperanca"],
+      ["depressaoSono", "alteracao do sono"],
+      ["depressaoEnergia", "reduzida energia"],
+      ["depressaoApetite", "alteracao do apetite"],
+      ["depressaoConcentracao", "prejuizo de concentracao"],
+      ["depressaoFalaLenta", "lentificacao da fala"],
+      ["depressaoAgitacao", "agitacao psicomotora"],
+      ["depressaoAutoestimaRuinaEstorvo", "baixa autoestima, ideias de ruina ou sentimento de estorvo"]
+    ], "No rastreio depressivo, foram assinalados"),
+    positiveChoiceText(form, [
+      ["sintomasPsicoticosParanoiaObservado", "ideacao paranoide ou persecutoria"],
+      ["sintomasPsicoticosVozesRuidos", "percepcao auditiva incomum"]
+    ], "No rastreio psicotico, foram registrados"),
+    form.sintomasPsicoticosOutro ? `Outros sintomas psicoticos relatados: ${stripFinalPeriod(form.sintomasPsicoticosOutro)}.` : "",
+    riskText(form)
+  ].filter(Boolean);
+  return parts.join(" ");
+}
+
+function positiveChoiceText(form, pairs, opening) {
+  const positives = pairs.filter(([key]) => form[key] === "SIM").map(([, label]) => label);
+  return positives.length ? `${opening} ${formatClinicalList(positives)}.` : "";
+}
+
+function riskText(form) {
+  const risks = [
+    form.riscoSuicidioIdeacao === "SIM" ? "ideacao suicida" : "",
+    form.riscoSuicidioPlanejamento === "SIM" ? "planejamento suicida" : "",
+    form.riscoSuicidioMeios === "SIM" ? "acesso a meios potencialmente letais" : "",
+    form.riscoSuicidioTentativasPrevias === "SIM" ? "tentativas previas de autoagressao" : ""
+  ].filter(Boolean);
+  const reasons = form.riscoSuicidioRazoesViver ? ` Fatores protetivos/razoes para viver registrados: ${stripFinalPeriod(form.riscoSuicidioRazoesViver)}.` : "";
+  return risks.length ? `Quanto ao risco, registra-se ${formatClinicalList(risks)}.${reasons}` : reasons.trim();
+}
+
+function clinicalAntecedentsSection(form) {
+  const parts = [
+    joinWithOutro(form.psiPrevios, form.psiPreviosOutro) ? `Apresenta antecedentes psiquiatricos de ${lowerFirst(joinWithOutro(form.psiPrevios, form.psiPreviosOutro))}.` : "",
+    joinWithOutro(form.tratamentos, form.tratamentosOutro) ? `Historico de tratamentos previos com ${lowerFirst(joinWithOutro(form.tratamentos, form.tratamentosOutro))}.` : "",
+    joinWithOutro(form.medicos, form.medicosOutro) ? `Antecedentes medicos: ${stripFinalPeriod(joinWithOutro(form.medicos, form.medicosOutro))}.` : "",
+    joinWithOutro(form.familiares, form.familiaresOutro) ? `Historico familiar positivo para ${lowerFirst(joinWithOutro(form.familiares, form.familiaresOutro))}.` : "",
+    joinWithOutro(form.substancias, form.substanciasOutro) ? `Relata uso/habitos relacionados a ${lowerFirst(joinWithOutro(form.substancias, form.substanciasOutro))}.` : "",
+    joinWithOutro(form.usoSubstanciasComportamentos, form.usoSubstanciasComportamentosOutro) ? `No rastreio de substancias e comportamentos aditivos, foram registrados: ${lowerFirst(joinWithOutro(form.usoSubstanciasComportamentos, form.usoSubstanciasComportamentosOutro))}.` : ""
+  ].filter(Boolean);
+  return polishClinicalText(parts.join(" ") || "Sem antecedentes ou habitos relevantes informados ate o momento.");
+}
+
+function clinicalMentalExamSection(form) {
+  const sentences = [
+    clinicalMentalGroupSentence(form, "aparencia", "Aparencia e atitude"),
+    clinicalMentalGroupSentence(form, "consciencia", "Consciencia"),
+    clinicalMentalGroupSentence(form, "atencao", "Atencao"),
+    clinicalMentalGroupSentence(form, "orientacao", "Orientacao"),
+    clinicalMentalGroupSentence(form, "memoria", "Memoria"),
+    clinicalMentalGroupSentence(form, "sensopercepcao", "Sensopercepcao"),
+    clinicalMentalGroupSentence(form, "pensamentoCursoForma", "Curso e forma do pensamento"),
+    clinicalMentalGroupSentence(form, "pensamentoConteudo", "Conteudo do pensamento"),
+    clinicalMentalGroupSentence(form, "linguagem", "Linguagem"),
+    clinicalMentalGroupSentence(form, "humor", "Humor"),
+    clinicalMentalGroupSentence(form, "afeto", "Afeto"),
+    clinicalMentalGroupSentence(form, "psicomotricidadeVontade", "Psicomotricidade e vontade"),
+    clinicalMentalGroupSentence(form, "juizoCritico", "Juizo critico")
+  ].filter(Boolean);
+  return polishClinicalText(sentences.join(" ") || "Paciente sem alteracoes descritas no exame psiquico.");
+}
+
+function clinicalMentalGroupSentence(form, key, label) {
+  const values = clinicalValueList(form[key], form[`${key}Outro`]);
+  return values.length ? `${label}: ${formatClinicalList(values)}.` : "";
+}
+
+function polishClinicalText(value = "") {
+  return `${stripFinalPeriod(value)
+    .replace(/\s+/g, " ")
+    .replace(/\bmedo de enlouquecer\b/gi, "medo de perda do controle cognitivo")
+    .replace(/\bmedo de morrer\b/gi, "sensacao de morte iminente")
+    .replace(/\bfalar muito\b/gi, "logorreia")
+    .replace(/\bfalando muito\b/gi, "logorreia")
+    .replace(/\bagitacao\b/gi, "agitacao psicomotora")
+    .replace(/\bansioso\b/gi, "humor ansioso")
+    .trim()}.`;
+}
+
+function patientIdentificationText(patient = {}, withPrefix = true) {
   const age = calculateAge(patient.nascimento);
+  const sexo = patient.sexo ? lowerFirst(patient.sexo) : "";
   const fragments = [
-    patient.nome || "Paciente",
+    sexo ? `${withPrefix ? "Paciente " : ""}${sexo}` : withPrefix ? "Paciente" : "",
     age ? `${age} anos` : "",
-    patient.sexo || "",
     patient.estadoCivil ? patient.estadoCivil.toLowerCase() : "",
-    patient.ocupacao ? `ocupacao: ${patient.ocupacao}` : ""
+    patient.ocupacao ? lowerFirst(patient.ocupacao) : ""
   ].filter(Boolean);
   return `${fragments.join(", ")}.`;
 }
 
+function evolutionOpeningText(form, patient = {}) {
+  const identification = patientIdentificationText(patient, false).replace(/\.$/, "");
+  const complaint = stripFinalPeriod(form.queixa || firstLineFromQphda(form.qphda) || "queixa nao informada");
+  const subject = identification ? `Paciente ${identification}` : "Paciente";
+  return `${subject}, se apresenta ao servico com queixa principal de "${complaint}".`;
+}
+
+function hdaEvolutionText(form, previous = null, isReturn = false) {
+  if (isReturn) return `HDA: Paciente relata que ${lowerFirst(stripFinalPeriod(returnStoryText(form, previous)))}.`;
+  const story = form.historia || remainingQphdaText(form.qphda, form.queixa);
+  const fatorText = joinWithOutro(form.fatores, form.fatoresOutro);
+  const melhoraText = joinWithOutro(form.fatoresMelhora, form.fatoresMelhoraOutro);
+  const impactoText = joinValues(form.impacto);
+  const parts = [
+    story ? lowerFirst(stripFinalPeriod(story)) : "",
+    fatorText ? `associa o quadro a ${lowerFirst(fatorText)}` : "",
+    melhoraText ? lowerFirst(stripFinalPeriod(improvementSentence(melhoraText))) : "",
+    impactoText ? `descreve impacto funcional como ${lowerFirst(impactoText)}` : ""
+  ].filter(Boolean);
+  return `HDA: Paciente relata que ${parts.length ? parts.join(". ") : "a historia da doenca atual ainda nao foi preenchida"}.`;
+}
+
+function antecedentsEvolutionText(form) {
+  const parts = [
+    joinWithOutro(form.psiPrevios, form.psiPreviosOutro) ? `historia pregressa de ${lowerFirst(joinWithOutro(form.psiPrevios, form.psiPreviosOutro))}` : "",
+    joinWithOutro(form.tratamentos, form.tratamentosOutro) ? `tratamentos previos com ${lowerFirst(joinWithOutro(form.tratamentos, form.tratamentosOutro))}` : "",
+    joinWithOutro(form.medicos, form.medicosOutro) ? `antecedentes medicos de ${lowerFirst(joinWithOutro(form.medicos, form.medicosOutro))}` : "",
+    joinWithOutro(form.familiares, form.familiaresOutro) ? `antecedentes familiares de ${lowerFirst(joinWithOutro(form.familiares, form.familiaresOutro))}` : "",
+    joinWithOutro(form.substancias, form.substanciasOutro) ? `uso de ${lowerFirst(joinWithOutro(form.substancias, form.substanciasOutro))}` : ""
+  ].filter(Boolean);
+  return `Antecedentes: ${parts.length ? parts.join("; ") : "sem antecedentes informados"}.`;
+}
+
+function mentalExamEvolutionText(form) {
+  const findings = mentalStateFindings(form);
+  return `Exame psiquico: Paciente ${findings.length ? formatClinicalList(findings) : "sem alteracoes descritas no exame psiquico"}.`;
+}
+
 function consultationStoryText(form) {
   const qphdaText = anamnesisText(form);
+  const complaint = form.queixa || form.qphda || "";
+  const story = form.historia || (!form.queixa ? "" : form.qphda || "");
+  const fatorText = joinWithOutro(form.fatores, form.fatoresOutro);
+  const melhoraText = joinWithOutro(form.fatoresMelhora, form.fatoresMelhoraOutro);
+  const impactoText = joinValues(form.impacto);
   const parts = [
-    qphdaText ? `Comparece para avaliacao psiquiatrica. Registro de QP e HDA: ${qphdaText}` : "Comparece para avaliacao psiquiatrica.",
-    form.inicio ? `O inicio foi caracterizado como ${form.inicio.toLowerCase()}.` : "",
-    form.curso ? `O curso referido foi ${form.curso.toLowerCase()}.` : "",
-    joinValues(form.fatores) ? `Fatores associados ou desencadeantes registrados: ${joinValues(form.fatores)}${form.fatoresOutro ? ` (${form.fatoresOutro})` : ""}.` : "",
-    joinValues(form.fatoresPiora) ? `Refere piora com ${joinValues(form.fatoresPiora)}${form.fatoresPioraOutro ? ` (${form.fatoresPioraOutro})` : ""}.` : "",
-    joinValues(form.fatoresMelhora) ? `Aponta melhora com ${joinValues(form.fatoresMelhora)}${form.fatoresMelhoraOutro ? ` (${form.fatoresMelhoraOutro})` : ""}.` : "",
-    joinValues(form.impacto) ? `Ha impacto funcional descrito como: ${joinValues(form.impacto)}.` : ""
+    complaint
+      ? `Comparece para avaliacao psiquiatrica com queixa principal de ${stripFinalPeriod(complaint)}.`
+      : "Comparece para avaliacao psiquiatrica.",
+    story ? `Relata que ${lowerFirst(stripFinalPeriod(story))}.` : (!form.queixa && qphdaText ? `Relata ${lowerFirst(stripFinalPeriod(qphdaText))}.` : ""),
+    fatorText ? `Quadro associado ou desencadeado por ${lowerFirst(fatorText)}.` : "",
+    melhoraText ? improvementSentence(melhoraText) : "",
+    impactoText ? `Descreve o impacto funcional como ${lowerFirst(impactoText)}.` : ""
   ].filter(Boolean);
   return parts.join(" ");
 }
@@ -1449,25 +2038,15 @@ function historyText(form) {
 }
 
 function mentalStateText(form) {
-  const groups = [
-    ["consciencia", "consciencia"],
-    ["aparencia", "aparencia, atitude e contato"],
-    ["atencao", "atencao"],
-    ["orientacao", "orientacao"],
-    ["memoria", "memoria"],
-    ["sensopercepcao", "sensopercepcao"],
-    ["pensamentoCursoForma", "pensamento, curso e forma"],
-    ["pensamentoConteudo", "pensamento, conteudo"],
-    ["linguagem", "linguagem"],
-    ["humor", "humor"],
-    ["afeto", "afeto"],
-    ["psicomotricidadeVontade", "psicomotricidade e vontade"],
-    ["juizoCritico", "juizo critico e insight"]
-  ];
-  const findings = groups
-    .map(([key, label]) => joinValues(form[key]) ? `${label}: ${joinValues(form[key])}${form[`${key}Outro`] ? ` (${form[`${key}Outro`]})` : ""}` : "")
+  const findings = mentalStateFindings(form);
+  return findings.length ? `Ao exame psiquico, observou-se ${formatClinicalList(findings)}.` : "";
+}
+
+function mentalStateFindings(form) {
+  const groups = ["aparencia", "consciencia", "atencao", "orientacao", "memoria", "sensopercepcao", "pensamentoCursoForma", "pensamentoConteudo", "linguagem", "humor", "afeto", "psicomotricidadeVontade", "juizoCritico"];
+  return groups
+    .flatMap(key => clinicalValueList(form[key], form[`${key}Outro`]))
     .filter(Boolean);
-  return findings.length ? `Ao exame psiquico, observou-se ${findings.join("; ")}.` : "";
 }
 
 function relevantNegativeText(form) {
@@ -1498,46 +2077,6 @@ function negativeValues(label, value) {
   }).map(item => `${label}: ${item}`);
 }
 
-function diagnosisText(form) {
-  const parts = [
-    form.diagnosticoManual ? `Hipotese diagnostica principal: ${form.diagnosticoManual}` : "",
-    form.diferenciais ? `Diagnosticos diferenciais considerados: ${form.diferenciais}` : "",
-    form.diagnosticoObservacaoMedica ? `Observacao medica: ${form.diagnosticoObservacaoMedica}` : ""
-  ].filter(Boolean);
-  return parts.join("\n");
-}
-
-function planText(form) {
-  const parts = [
-    form.tratamentoMedicamentoso ? `Tratamento medicamentoso proposto/discutido: ${form.tratamentoMedicamentoso}` : "",
-    form.medicationGeneric ? `Medicamento pesquisado: ${form.medicationGeneric}.` : "",
-    form.medicationPresentation ? `Apresentacao/posologia pesquisada: ${form.medicationPresentation}` : "",
-    form.abordagensTerapeuticas ? `Outras abordagens terapeuticas: ${form.abordagensTerapeuticas}` : "",
-    form.examesLaboratoriais ? `Exames complementares sugeridos: ${form.examesLaboratoriais}` : "",
-    form.condutaMedica ? `Conduta medica registrada: ${form.condutaMedica}` : "",
-    form.manualPrice ? `Observacao de preco/farmacia: ${form.manualPrice}` : ""
-  ].filter(Boolean);
-  return parts.length ? `Plano e orientacoes: ${parts.join("\n")}` : "";
-}
-
-function complementaryText(form) {
-  const vitals = [
-    form.pa ? `PA ${form.pa}` : "",
-    form.fc ? `FC ${form.fc}` : "",
-    form.fr ? `FR ${form.fr}` : "",
-    form.temperatura ? `temperatura ${form.temperatura}` : "",
-    form.peso ? `peso ${form.peso}` : "",
-    form.altura ? `altura ${form.altura}` : "",
-    form.imc ? `IMC ${form.imc}` : "",
-    form.cintura ? `cintura ${form.cintura}` : ""
-  ].filter(Boolean);
-  const parts = [
-    vitals.length ? `Dados fisicos/vitais registrados: ${vitals.join(", ")}.` : "",
-    form.fisico ? `Achados fisicos e neurologicos relevantes: ${form.fisico}` : ""
-  ].filter(Boolean);
-  return parts.join(" ");
-}
-
 function valueList(value) {
   return Array.isArray(value) ? value.filter(Boolean) : value ? [value] : [];
 }
@@ -1546,86 +2085,128 @@ function uniqueValues(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+function outdatedEvolutionText(value = "") {
+  return normalizeText(value).startsWith("evolucao medica auxiliada por ia");
+}
+
+function stripFinalPeriod(value = "") {
+  return String(value || "").trim().replace(/[.\s]+$/g, "");
+}
+
+function firstLineFromQphda(value = "") {
+  return stripFinalPeriod(String(value || "").split(/\n+/).find(Boolean) || "");
+}
+
+function remainingQphdaText(value = "", complaint = "") {
+  const lines = String(value || "").split(/\n+/).map(line => stripFinalPeriod(line)).filter(Boolean);
+  if (!lines.length) return "";
+  if (complaint && normalizeText(lines[0]).includes(normalizeText(complaint))) return lines.slice(1).join(". ");
+  return lines.slice(1).join(". ") || lines[0];
+}
+
+function joinWithOutro(value, otherValue = "") {
+  const base = valueList(value).filter(item => normalizeText(item) !== "outro").join(", ");
+  return [base, otherValue].filter(Boolean).join(base && otherValue ? ", " : "");
+}
+
+function clinicalValueList(value, otherValue = "") {
+  return [
+    ...valueList(value).filter(item => normalizeText(item) !== "outro"),
+    otherValue
+  ].map(clinicalPhrase).filter(Boolean);
+}
+
+function clinicalPhrase(value = "") {
+  const cleaned = stripFinalPeriod(value)
+    .replace(/\s+/g, " ")
+    .replace(/^(aparencia|aparência|atitude|contato|consciencia|consciência|atencao|atenção|orientacao|orientação|memoria|memória|sensopercepcao|sensopercepção|linguagem|humor|afeto|psicomotricidade|vontade|juizo critico|juízo crítico|insight)\s*:\s*/i, "")
+    .replace(/^(memoria|memória)\s+/i, "")
+    .replace(/^(sensopercepcao|sensopercepção|linguagem|humor|afeto|consciencia|consciência|atencao|atenção|orientacao|orientação)\s+/i, "")
+    .replace(/^(paciente\s+)?/i, "")
+    .trim();
+  return lowerFirst(cleaned);
+}
+
+function formatClinicalList(items = []) {
+  const cleanItems = uniqueValues(items.map(clinicalPhrase).filter(Boolean));
+  if (cleanItems.length <= 1) return cleanItems[0] || "";
+  if (cleanItems.length === 2) return `${cleanItems[0]} e ${cleanItems[1]}`;
+  return `${cleanItems.slice(0, -1).join(", ")} e ${cleanItems.at(-1)}`;
+}
+
+function improvementSentence(value = "") {
+  const text = lowerFirst(stripFinalPeriod(value)).replace(/^melhora\s+/i, "");
+  const connector = normalizeText(text).startsWith("apos ") ? "" : "com ";
+  return `Diz que a melhora geralmente ocorre ${connector}${text}.`;
+}
+
+function polishSoapText(value = "") {
+  return `${stripFinalPeriod(value)
+    .replace(/\s+/g, " ")
+    .replace(/\. Comparece/g, ", encaminhado ao atendimento com a psiquiatria. Comparece")
+    .replace(/\. Antecedentes e contexto:/g, ". Na historia pregressa,")
+    .replace(/Antecedentes psiquiatricos:/g, "faz mencao a")
+    .replace(/Tratamentos previos:/g, "tratamentos previos:")
+    .trim()}.`;
+}
+
 function lowerFirst(value = "") {
   const text = String(value).trim();
   return text ? text.charAt(0).toLowerCase() + text.slice(1) : "";
 }
 
-function aiOptionLabel(option) {
-  return `${option.agent} - ${option.model}`;
-}
-
-function selectedAiTreatmentOption(value) {
-  return aiTreatmentOptions.find(option => aiOptionLabel(option) === value) || aiTreatmentOptions[0];
-}
-
 function diagnosticRules() {
   return [
     {
-      name: "Transtorno depressivo, episodio depressivo",
+      name: "Depressao Maior",
       cid11: "6A70 - Episodio depressivo",
       dsm5tr: "Transtorno depressivo maior, episodio depressivo maior",
       terms: ["hipotimia", "anedonia", "deprim", "lentificacao", "hipobulia", "despertar precoce", "ideacao suicida"],
       differential: "luto, transtorno bipolar, uso de substancias, hipotireoidismo e transtorno de ajustamento."
     },
     {
-      name: "Transtorno de ansiedade generalizada",
+      name: "Transtorno de Ansiedade Generalizada",
       cid11: "6B00 - Transtorno de ansiedade generalizada",
       dsm5tr: "Transtorno de ansiedade generalizada",
       terms: ["humor ansioso", "ansios", "preocupacoes excessivas", "inquietude", "tensao", "panico"],
       differential: "transtorno do panico, ansiedade social, TOC, hipertireoidismo e uso de estimulantes."
     },
     {
-      name: "Transtorno bipolar ou relacionado",
+      name: "Depressao Bipolar",
       cid11: "6A60/6A61 - Transtorno bipolar tipo I/tipo II",
       dsm5tr: "Transtorno bipolar I ou II",
       terms: ["hipertimia", "euforia", "reducao da necessidade de sono", "fuga de ideias", "logorreia", "aceleracao", "hiperbulia"],
       differential: "TDAH, uso de substancias, transtorno de personalidade borderline e episodio depressivo unipolar."
     },
     {
-      name: "Transtorno obsessivo-compulsivo",
+      name: "Transtorno Obsessivo-Compulsivo",
       cid11: "6B20 - Transtorno obsessivo-compulsivo",
       dsm5tr: "Transtorno obsessivo-compulsivo",
       terms: ["obsessoes", "compulsividade", "toc", "rituais", "intrusivos"],
       differential: "ansiedade generalizada, transtornos relacionados a trauma, tiques e transtorno de personalidade obsessivo-compulsiva."
     },
     {
-      name: "Transtorno psicotico primario ou secundario",
+      name: "Transtorno Psicotico Primario ou Secundario",
       cid11: "6A20-6A2Z - Espectro da esquizofrenia e outros transtornos psicoticos primarios",
       dsm5tr: "Espectro da esquizofrenia e outros transtornos psicoticos",
       terms: ["alucinacao", "delirio", "juizo prejudicado", "critica prejudicada", "desconfianca", "afrouxamento", "descarrilamento"],
       differential: "transtorno bipolar com sintomas psicoticos, depressao psicotica, delirium, epilepsia e substancias."
     },
     {
-      name: "Transtorno relacionado a trauma ou estresse",
+      name: "Transtorno Relacionado a Trauma ou Estresse",
       cid11: "6B40/6B43 - TEPT ou transtorno de ajustamento",
       dsm5tr: "TEPT ou transtorno de ajustamento",
       terms: ["tept", "trauma", "luto", "separacao", "estresse", "conflito", "ajustamento"],
       differential: "depressao maior, ansiedade generalizada, luto prolongado e transtorno de personalidade."
     },
     {
-      name: "Transtorno por uso de substancias",
+      name: "Transtorno por Uso de Substancias",
       cid11: "6C40-6C4Z - Transtornos por uso de substancias",
       dsm5tr: "Transtornos relacionados a substancias e transtornos aditivos",
       terms: ["alcool", "cannabis", "cocaina", "crack", "opioides", "benzodiazepinicos", "substancias"],
       differential: "transtornos primarios do humor, ansiedade, psicose induzida por substancias e abstinencia/intoxicacao."
     }
   ];
-}
-
-function summarizeEvidence(form) {
-  const qphdaText = anamnesisText(form);
-  return [
-    qphdaText && `QP/HDA: ${qphdaText}`,
-    form.inicio && `inicio ${form.inicio}`,
-    form.curso && `curso ${form.curso}`,
-    joinValues(form.humor) && `humor: ${joinValues(form.humor)}`,
-    joinValues(form.pensamentoCursoForma) && `pensamento curso/forma: ${joinValues(form.pensamentoCursoForma)}`,
-    joinValues(form.pensamentoConteudo) && `pensamento conteudo: ${joinValues(form.pensamentoConteudo)}`,
-    joinValues(form.sensopercepcao) && `sensopercepcao: ${joinValues(form.sensopercepcao)}`,
-    joinValues(form.juizoCritico) && `juizo critico/insight: ${joinValues(form.juizoCritico)}`,
-    joinValues(form.impacto) && `impacto: ${joinValues(form.impacto)}`
-  ].filter(Boolean).join("; ");
 }
 
 function joinValues(value) {
@@ -1642,8 +2223,32 @@ function normalizeText(value) {
 
 function updateDraftFromForm(form) {
   if (form.id === "patient-form") draft.patient = { ...(draft.patient || {}), ...formToObject(form) };
-  if (form.id === "consult-form") draft.consultation = { ...(draft.consultation || {}), ...formToObject(form) };
-  if (form.id === "return-form") draft.return = { ...(draft.return || {}), ...formToObject(form) };
+  if (form.id === "consult-form") {
+    const data = formToObject(form);
+    data.examesLaboratoriais = joinWithOutro(data.examesSolicitados, data.examesSolicitadosOutro);
+    draft.consultation = { ...(draft.consultation || {}), ...data };
+  }
+  if (form.id === "return-form") {
+    const data = formToObject(form);
+    data.examesLaboratoriais = joinWithOutro(data.examesSolicitados, data.examesSolicitadosOutro);
+    draft.return = { ...(draft.return || {}), ...data };
+  }
+}
+
+function sanitizeConsultationRecord(data = {}) {
+  const cleaned = { ...data };
+  [
+    "medicationGeneric",
+    "medicationNameText",
+    "medicationPresentation",
+    "medicationSafety",
+    "medicationBestUse",
+    "medicationPriceResearch",
+    "medicationOnlineStatus",
+    "medicationStatus",
+    "manualPrice"
+  ].forEach(key => delete cleaned[key]);
+  return cleaned;
 }
 
 function currentClinicalDraft() {
